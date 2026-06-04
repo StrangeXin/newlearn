@@ -1,12 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser, homePathForRole } from "@/lib/auth/user";
+import {
+  getCurrentUser,
+  homePathForRole,
+  passwordChangeRequired,
+} from "@/lib/auth/user";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) {
-    redirect(user.mustChangePassword ? "/change-password" : homePathForRole(user.role));
+    redirect(
+      user.mustChangePassword && passwordChangeRequired()
+        ? "/change-password"
+        : homePathForRole(user.role),
+    );
   }
 
   return (

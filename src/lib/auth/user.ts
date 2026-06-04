@@ -28,6 +28,11 @@ export function homePathForRole(role: string): string {
   return role === "EMPLOYEE" ? "/learn" : "/admin";
 }
 
+/** 是否强制首登改密。设 REQUIRE_PASSWORD_CHANGE=false 可临时关闭（默认开启）。 */
+export function passwordChangeRequired(): boolean {
+  return process.env.REQUIRE_PASSWORD_CHANGE !== "false";
+}
+
 export function roleLabel(role: string): string {
   return role === "SUPERADMIN" ? "超级管理员" : role === "ADMIN" ? "管理员" : "员工";
 }

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { hashPassword, passwordSchema, verifyPassword } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
-import { getCurrentUser, homePathForRole } from "@/lib/auth/user";
+import { getCurrentUser, homePathForRole, passwordChangeRequired } from "@/lib/auth/user";
 
 export interface ActionState {
   error?: string;
@@ -34,7 +34,11 @@ export async function loginAction(
   }
 
   await createSession(user.id, user.role);
-  redirect(user.mustChangePassword ? "/change-password" : homePathForRole(user.role));
+  redirect(
+    user.mustChangePassword && passwordChangeRequired()
+      ? "/change-password"
+      : homePathForRole(user.role),
+  );
 }
 
 /** 改密：首登强制改密免输当前密码；日常改密需校验当前密码。 */
