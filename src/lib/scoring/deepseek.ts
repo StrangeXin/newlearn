@@ -5,12 +5,17 @@
 // ===========================================================================
 
 import {
+  EMPTY_TAGS,
   FinalizeInput,
   FinalizeResult,
+  LearnerContext,
+  LearnerMemoryTags,
   PASS_THRESHOLD,
   ScoringService,
   SubmitNoteInput,
   SubmitNoteResult,
+  UpdateMemoryInput,
+  UpdateMemoryResult,
 } from "./types";
 
 const SYSTEM_PROMPT = `你是 AI 学习平台的资深评审专家，负责对员工针对某个关键词提交的学习笔记进行严格、公正、可复现的打分与追问。
@@ -86,6 +91,7 @@ function formatReferencePoints(points?: string[]): string {
 async function chat(
   cfg: DeepSeekConfig,
   userContent: string,
+  system: string = SYSTEM_PROMPT,
 ): Promise<Record<string, unknown>> {
   const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
     method: "POST",
@@ -96,7 +102,7 @@ async function chat(
     body: JSON.stringify({
       model: cfg.model,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: system },
         { role: "user", content: userContent },
       ],
       temperature: 0.2,
@@ -119,6 +125,36 @@ async function chat(
   return parseJsonObject(content);
 }
 
+/** 把学习者资料与画像拼成一段提示上下文（缺省则返回空串）。 */
+function formatLearner(learner?: LearnerContext): string {
+  if (!learner) return "";
+  const lines: string[] = [];
+  const p = learner.profile;
+  if (p) {
+    lines.push(
+      `- 岗位：${p.position}；部门：${p.department}；职级/年限：${p.level}`,
+      `- 专业背景：${p.background}`,
+      `- 对 AI 的熟悉度：${p.aiFamiliarity}`,
+      `- 最想把 AI 用在：${p.applicationAreas}`,
+    );
+  }
+  const m = learner.memory;
+  if (m) {
+    const t = m.tags;
+    if (t) {
+      lines.push(
+        `- 已知强项：${t.strengths.join("、") || "（暂无）"}`,
+        `- 薄弱点：${t.weaknesses.join("、") || "（暂无）"}`,
+        `- 兴趣方向：${t.interests.join("、") || "（暂无）"}`,
+        `- 知识盲区：${t.blindSpots.join("、") || "（暂无）"}`,
+      );
+    }
+    if (m.portrait?.trim()) lines.push(`- 画像摘要：${m.portrait}`);
+  }
+  if (lines.length === 0) return "";
+  return `\n【学习者档案（用于让追问更贴合其岗位与水平；不要把这些信息当作笔记内容来打分）】\n${lines.join("\n")}\n`;
+}
+
 export class DeepSeekScoringService implements ScoringService {
   async submitNote(input: SubmitNoteInput): Promise<SubmitNoteResult> {
     const cfg = readConfig();
@@ -129,11 +165,11 @@ export class DeepSeekScoringService implements ScoringService {
 - 简介：${keyword.description ?? "（无）"}
 - 参考考核要点：
 ${formatReferencePoints(keyword.referencePoints)}
-
+${formatLearner(input.learner)}
 【学习者笔记】
 ${note}
 
-请按 rubric 评估，输出严格 JSON：{"initialScore": 整数(1-100), "followups": [1~3 条中文追问]}（笔记越完整追问越少）。只返回 JSON。`;
+请按 rubric 评估并据笔记薄弱点生成 1~3 个追问；若有学习者档案，让追问尽量贴合其岗位、背景与画像，引导其把该关键词与实际工作联系起来。输出严格 JSON：{"initialScore": 整数(1-100), "followups": [1~3 条中文追问]}（笔记越完整追问越少）。只返回 JSON。`;
 
     const obj = await chat(cfg, userContent);
     const initialScore = clampScore(Number(obj.initialScore));
@@ -163,7 +199,7 @@ ${note}
 - 简介：${keyword.description ?? "（无）"}
 - 参考考核要点：
 ${formatReferencePoints(keyword.referencePoints)}
-
+${formatLearner(input.learner)}
 【学习者笔记】
 ${note}
 
@@ -183,4 +219,45 @@ ${qa}
           : `最终得分 ${finalScore} 分，未达及格线，可重新提交再次挑战。`;
     return { finalScore, passed, feedback };
   }
+
+  async updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult> {
+    const cfg = readConfig();
+    const prev = input.learner.memory?.tags ?? EMPTY_TAGS;
+    const qa = input.followups
+      .map(
+        (q, i) =>
+          `追问${i + 1}：${q}\n回答${i + 1}：${input.answers[i]?.trim() ? input.answers[i] : "（未作答）"}`,
+      )
+      .join("\n");
+
+    const userContent = `请基于该员工本次在关键词「${input.keyword.term}」上的表现，增量更新其学习画像。
+${formatLearner(input.learner)}
+【本次表现】
+- 最终得分：${input.finalScore}
+- 笔记：${input.note}
+- 追问与回答：
+${qa}
+
+【已有标签（在此基础上增量调整，不要凭空抹掉历史）】
+${JSON.stringify(prev)}
+
+请输出更新后的标签与一段不超过 200 字的中文画像摘要（这个员工是谁、当前掌握程度、薄弱处、如何把所学结合到其岗位）。严格 JSON：
+{"tags":{"strengths":[],"weaknesses":[],"interests":[],"blindSpots":[]},"portrait":"..."}。只返回 JSON。`;
+
+    const obj = await chat(cfg, userContent, MEMORY_SYSTEM_PROMPT);
+    const rawTags = (obj.tags ?? {}) as Record<string, unknown>;
+    const toStrArr = (v: unknown): string[] =>
+      Array.isArray(v) ? v.map((x) => String(x)).filter((s) => s.trim()) : [];
+    const tags: LearnerMemoryTags = {
+      strengths: toStrArr(rawTags.strengths),
+      weaknesses: toStrArr(rawTags.weaknesses),
+      interests: toStrArr(rawTags.interests),
+      blindSpots: toStrArr(rawTags.blindSpots),
+    };
+    const portrait =
+      typeof obj.portrait === "string" ? obj.portrait : input.learner.memory?.portrait ?? "";
+    return { tags, portrait };
+  }
 }
+
+const MEMORY_SYSTEM_PROMPT = `你是 AI 学习平台的学情分析助手。你的任务是依据员工最新一次的学习表现，增量维护其「学习画像」——既要积累强项、兴趣，也要记录薄弱点与盲区，并思考如何把所学与其岗位结合。要求客观、具体、连续（在已有画像基础上演进），只输出严格 JSON。`;

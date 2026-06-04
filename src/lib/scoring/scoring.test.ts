@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MockScoringService } from "./mock";
-import { PASS_THRESHOLD } from "./types";
+import { type LearnerContext, PASS_THRESHOLD } from "./types";
 
 const svc = new MockScoringService();
 
@@ -95,5 +95,62 @@ describe("MockScoringService · finalize", () => {
       answers: followups.map(() => ""),
     });
     expect(blank.finalScore).toBeLessThan(good.finalScore);
+  });
+});
+
+const learner: LearnerContext = {
+  profile: {
+    position: "产品经理",
+    department: "增长部",
+    level: "P6 / 5 年",
+    background: "市场营销，少量数据分析",
+    aiFamiliarity: "了解",
+    applicationAreas: "用户增长、需求分析",
+  },
+};
+
+describe("MockScoringService · 个性化追问", () => {
+  it("传入岗位时，最后一个追问结合该岗位", async () => {
+    const r = await svc.submitNote({ note: weakNote, keyword, learner });
+    const last = r.followups[r.followups.length - 1];
+    expect(last).toContain("产品经理");
+    expect(last).toContain(keyword.term);
+  });
+
+  it("不传学习者时，追问不含岗位字样（保持通用）", async () => {
+    const r = await svc.submitNote({ note: weakNote, keyword });
+    expect(r.followups.some((f) => f.includes("产品经理"))).toBe(false);
+  });
+});
+
+describe("MockScoringService · updateMemory", () => {
+  const base = { keyword, note: strongNote, followups: ["q"], answers: ["a"] };
+
+  it("高分把关键词记入强项、低分记入盲区", async () => {
+    const hi = await svc.updateMemory({ ...base, finalScore: 90, learner });
+    expect(hi.tags.strengths).toContain(keyword.term);
+
+    const lo = await svc.updateMemory({ ...base, finalScore: 40, learner });
+    expect(lo.tags.blindSpots).toContain(keyword.term);
+    expect(lo.portrait).toContain("产品经理");
+  });
+
+  it("完全确定性：相同输入得到相同画像", async () => {
+    const a = await svc.updateMemory({ ...base, finalScore: 75, learner });
+    const b = await svc.updateMemory({ ...base, finalScore: 75, learner });
+    expect(a).toEqual(b);
+  });
+
+  it("在已有标签基础上增量累积、不丢历史", async () => {
+    const withPrev: LearnerContext = {
+      ...learner,
+      memory: {
+        tags: { strengths: ["Transformer"], weaknesses: [], interests: [], blindSpots: [] },
+        portrait: "旧画像",
+      },
+    };
+    const r = await svc.updateMemory({ ...base, finalScore: 90, learner: withPrev });
+    expect(r.tags.strengths).toContain("Transformer");
+    expect(r.tags.strengths).toContain(keyword.term);
   });
 });

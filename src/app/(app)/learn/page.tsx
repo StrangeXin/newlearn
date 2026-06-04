@@ -1,8 +1,16 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/user";
+import { requireUser } from "@/lib/auth/user";
 
 export default async function LearnPage() {
-  const user = await getCurrentUser();
+  const user = await requireUser();
+  // 员工首次进来需先填基本资料（onboarding）
+  if (user.role === "EMPLOYEE") {
+    const profile = await prisma.employeeProfile.findUnique({
+      where: { userId: user.id },
+    });
+    if (!profile) redirect("/onboarding");
+  }
 
   const cfg = await prisma.activeSubjectConfig.findUnique({
     where: { singletonId: "GLOBAL" },

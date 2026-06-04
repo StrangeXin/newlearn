@@ -14,14 +14,18 @@
 // ===========================================================================
 
 import {
+  EMPTY_TAGS,
   FinalizeInput,
   FinalizeResult,
   Keyword,
+  LearnerMemoryTags,
   PASS_THRESHOLD,
   RUBRIC_DIMENSIONS,
   ScoringService,
   SubmitNoteInput,
   SubmitNoteResult,
+  UpdateMemoryInput,
+  UpdateMemoryResult,
 } from "./types";
 
 /** 将任意数值收敛到 1–100 的整数。 */
@@ -103,16 +107,21 @@ function followupCountFor(initialScore: number): 1 | 2 | 3 {
 }
 
 /**
- * 确定性地生成追问文案。问题池按「应优先补强的薄弱点」排序，
- * 取前 N 个，保证同输入同输出。
+ * 确定性地生成追问文案。问题池按「应优先补强的薄弱点」排序，取前 N 个。
+ * 若提供岗位，则把最后一问替换为「结合岗位」的应用题，演示个性化（仍确定性）。
  */
-function buildFollowups(term: string, count: 1 | 2 | 3): string[] {
+function buildFollowups(term: string, count: 1 | 2 | 3, position?: string): string[] {
   const pool = [
     `请进一步说明「${term}」的核心原理或运作机制，而不仅是定义。`,
     `能否举一个「${term}」的具体应用场景或实例，并解释它为什么适用？`,
     `「${term}」有哪些局限、风险或常见误区？请结合你的理解谈谈。`,
   ];
-  return pool.slice(0, count);
+  const list = pool.slice(0, count);
+  if (position && position.trim()) {
+    list[list.length - 1] =
+      `结合你作为「${position}」的日常工作，「${term}」可以怎么用上、能解决什么问题？`;
+  }
+  return list;
 }
 
 /**
@@ -170,7 +179,11 @@ export class MockScoringService implements ScoringService {
     const count = followupCountFor(initialScore);
     return {
       initialScore,
-      followups: buildFollowups(input.keyword.term, count),
+      followups: buildFollowups(
+        input.keyword.term,
+        count,
+        input.learner?.profile?.position,
+      ),
     };
   }
 
@@ -196,4 +209,47 @@ export class MockScoringService implements ScoringService {
       feedback: buildFeedback(finalScore, passed, hasBlankAnswer),
     };
   }
+
+  async updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult> {
+    const prev = input.learner.memory?.tags ?? EMPTY_TAGS;
+    const tags: LearnerMemoryTags = {
+      strengths: [...prev.strengths],
+      weaknesses: [...prev.weaknesses],
+      interests: [...prev.interests],
+      blindSpots: [...prev.blindSpots],
+    };
+    const term = input.keyword.term;
+
+    // 按最终分确定性分桶
+    if (input.finalScore >= 80) pushUnique(tags.strengths, term);
+    else if (input.finalScore < PASS_THRESHOLD) pushUnique(tags.blindSpots, term);
+    else pushUnique(tags.weaknesses, term);
+    // 笔记较长视为有钻研兴趣（确定性信号）
+    if (textLength(input.note) >= 1500) pushUnique(tags.interests, term);
+
+    capList(tags.strengths);
+    capList(tags.weaknesses);
+    capList(tags.interests);
+    capList(tags.blindSpots);
+
+    const position = input.learner.profile?.position ?? "员工";
+    const band =
+      input.finalScore >= 85 ? "优秀" : input.finalScore >= PASS_THRESHOLD ? "合格" : "待提升";
+    const toImprove = tags.weaknesses.length + tags.blindSpots.length;
+    const portrait =
+      `${position}画像：累计强项 ${tags.strengths.length} 项、待加强 ${toImprove} 项。` +
+      `最近完成「${term}」，最终 ${input.finalScore} 分（${band}）。`;
+
+    return { tags, portrait };
+  }
+}
+
+/** 去重追加（确定性）。 */
+function pushUnique(list: string[], item: string): void {
+  if (!list.includes(item)) list.push(item);
+}
+
+/** 限制列表长度，保留最近的若干项（确定性）。 */
+function capList(list: string[], max = 20): void {
+  if (list.length > max) list.splice(0, list.length - max);
 }

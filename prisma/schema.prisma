@@ -79,6 +79,10 @@ model User {
   rankingResults      RankingResult[]
   redemptions         Redemption[]      @relation("RedemptionApplicant")
   reviewedRedemptions Redemption[]      @relation("RedemptionReviewer")
+  /// 员工自填的基本资料（onboarding，1:1）；尚未填写为 null
+  profile             EmployeeProfile?
+  /// 系统维护、随学习不断更新的画像与标签（1:1）
+  memory              EmployeeMemory?
 
   // 审计：导入者 / 角色变更者（自引用）
   createdBy        User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -431,4 +435,50 @@ model Redemption {
   @@index([userId])
   @@index([status])
   @@map("redemptions")
+}
+
+// ============================================================================
+// 员工基本资料（onboarding 自填）+ 系统维护的画像/标签（随学习更新）
+// ============================================================================
+
+/// 员工首次进入时填写的基本资料，用于个性化追问。1:1 于 User。
+model EmployeeProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  /// 岗位
+  position      String
+  /// 部门
+  department    String
+  /// 职级 / 工作年限
+  level         String
+  /// 专业背景（学科、技能、过往领域）
+  background    String
+  /// 当前对 AI 的熟悉度（入门/了解/熟练/精通 等自陈）
+  aiFamiliarity String
+  /// 最想把 AI 用在哪些工作场景
+  applicationAreas String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("employee_profiles")
+}
+
+/// 系统对该员工不断更新的画像与标签（每个关键词终评后增量更新）。1:1 于 User。
+model EmployeeMemory {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  /// 结构化标签：{ strengths[], weaknesses[], interests[], blindSpots[] }
+  tags        Json     @default("{}")
+  /// 持续重写的自由文本画像摘要（这个员工是谁、掌握到什么程度、如何与岗位结合）
+  portrait    String   @default("")
+  /// 已并入画像的关键词次数（用于观察画像成熟度）
+  updateCount Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("employee_memories")
 }

@@ -33,14 +33,51 @@ export interface RubricDimension {
   description: string;
 }
 
+// ------------------------- 学习者上下文（个性化） -------------------------
+
+/** 员工自填的基本资料（onboarding）。 */
+export interface LearnerProfile {
+  position: string; // 岗位
+  department: string; // 部门
+  level: string; // 职级 / 年限
+  background: string; // 专业背景
+  aiFamiliarity: string; // 对 AI 的熟悉度
+  applicationAreas: string; // 想把 AI 用在哪些工作
+}
+
+/** 系统维护的结构化标签。 */
+export interface LearnerMemoryTags {
+  strengths: string[]; // 掌握强项
+  weaknesses: string[]; // 薄弱点
+  interests: string[]; // 兴趣方向
+  blindSpots: string[]; // 知识盲区
+}
+
+/** 系统对该员工不断更新的画像与标签。 */
+export interface LearnerMemory {
+  tags: LearnerMemoryTags;
+  portrait: string; // 自由文本画像摘要
+}
+
+/**
+ * 学习者上下文：资料 + 记忆。注入到追问/评分提示，使追问越来越贴合岗位。
+ * 两者都可缺省（资料未填、记忆尚空时退化为通用追问）。
+ */
+export interface LearnerContext {
+  profile?: LearnerProfile;
+  memory?: LearnerMemory;
+}
+
 // --------------------------- submitNote（第一段） ---------------------------
 
-/** submitNote 的输入：原始笔记 + 关键词上下文。 */
+/** submitNote 的输入：原始笔记 + 关键词上下文（可选学习者上下文）。 */
 export interface SubmitNoteInput {
   /** 学习者提交的纯文本笔记（业务层已校验 100–5000 字，见 PRD §6 步骤 2）。 */
   note: string;
   /** 当前关键词及其可选参考要点。 */
   keyword: Keyword;
+  /** 可选学习者上下文：拼入提示让追问贴合其岗位与画像。 */
+  learner?: LearnerContext;
 }
 
 /** submitNote 的输出：初始分 + 动态追问。 */
@@ -56,7 +93,7 @@ export interface SubmitNoteResult {
 
 // ---------------------------- finalize（第二段） ----------------------------
 
-/** finalize 的输入：原笔记 + 关键词 + 追问及其回答。 */
+/** finalize 的输入：原笔记 + 关键词 + 追问及其回答（可选学习者上下文）。 */
 export interface FinalizeInput {
   /** 与第一段相同的原始笔记。 */
   note: string;
@@ -69,6 +106,8 @@ export interface FinalizeInput {
    * 若某条未作答，约定传入空字符串占位以保持对齐。
    */
   answers: string[];
+  /** 可选学习者上下文。 */
+  learner?: LearnerContext;
 }
 
 /** finalize 的输出：最终分 + 是否及格 + 中文反馈。 */
@@ -81,6 +120,25 @@ export interface FinalizeResult {
   feedback: string;
 }
 
+// --------------------------- updateMemory（画像增量更新） ---------------------------
+
+/** updateMemory 的输入：本次关键词的完整表现 + 当前画像。 */
+export interface UpdateMemoryInput {
+  keyword: Keyword;
+  note: string;
+  followups: string[];
+  answers: string[];
+  finalScore: number;
+  /** 当前学习者上下文（含已有记忆，作为增量更新的基础）。 */
+  learner: LearnerContext;
+}
+
+/** updateMemory 的输出：更新后的标签与画像摘要。 */
+export interface UpdateMemoryResult {
+  tags: LearnerMemoryTags;
+  portrait: string;
+}
+
 // -------------------------------- 服务接口 ---------------------------------
 
 /**
@@ -88,12 +146,23 @@ export interface FinalizeResult {
  * 测试与本地演示实现为 MockScoringService，通过 SCORING_PROVIDER 切换。
  */
 export interface ScoringService {
-  /** 第一段：对笔记打初始分并生成 1–3 个追问。 */
+  /** 第一段：对笔记打初始分并生成 1–3 个追问（结合学习者上下文个性化）。 */
   submitNote(input: SubmitNoteInput): Promise<SubmitNoteResult>;
 
   /** 第二段：综合原笔记与追问回答给出最终分、是否及格与中文反馈。 */
   finalize(input: FinalizeInput): Promise<FinalizeResult>;
+
+  /** 每个关键词终评后：依据本次表现增量更新该员工的标签与画像。 */
+  updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult>;
 }
+
+/** 空记忆标签（画像尚未建立时的初值）。 */
+export const EMPTY_TAGS: LearnerMemoryTags = {
+  strengths: [],
+  weaknesses: [],
+  interests: [],
+  blindSpots: [],
+};
 
 /**
  * 通用评分维度，权重之和 = 1（见 PRD §6.1）。

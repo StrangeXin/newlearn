@@ -233,5 +233,29 @@ KeywordProgress(id, userId, keywordId, bestFinalScore, isCompleted, completedAt)
 PointsLedger(id, userId, subjectId, type(base|rank_bonus|redeem), amount, refId, createdAt)
 RankingResult(id, subjectId, chapterId, weekIndex, userId, avgScore, rank, bonusAwarded)
 Redemption(id, userId, item, amount, attachment?, status(pending|approved|rejected), reviewedBy, createdAt)
+EmployeeProfile(id, userId, position, department, level, background, aiFamiliarity, applicationAreas)  // onboarding 自填
+EmployeeMemory(id, userId, tags(Json: strengths/weaknesses/interests/blindSpots), portrait, updateCount)  // 系统维护、随学习更新
 ```
 （最终以 Prisma schema 为准。）
+
+---
+
+## 14. 个性化追问与员工画像（v1.1 增补）
+
+把「照本宣科」变成「结合岗位、逐步深入」的个性化引导。
+
+### 14.1 员工资料（onboarding）
+- 员工首登改密后，先填一次基本资料（6 项）：岗位、部门、职级/年限、专业背景、对 AI 的熟悉度、最想把 AI 用在哪些工作。
+- 未填资料的员工进入 `/learn` 会被引导到 `/onboarding`；管理员不需要。
+
+### 14.2 员工记忆（标签 + 画像）
+- 每个员工有一份系统维护的记忆：**结构化标签**（强项 / 薄弱点 / 兴趣方向 / 知识盲区）+ 一段**持续重写的画像摘要**。
+- **更新时机**：每个关键词**终评后增量更新**（在已有标签基础上演进，不抹掉历史）。
+
+### 14.3 个性化追问
+- **不做刻意引导**：把「员工资料 + 记忆」拼进追问/评分提示，交给大模型自然个性化——随学习推进，追问越来越贴合其角色与定位。
+- 打分服务契约（`ScoringService`）相应扩展：`submitNote` / `finalize` 接收可选 `LearnerContext`（资料+记忆）；新增 `updateMemory(本次表现 + 当前记忆) → 新标签+画像`。Mock 实现保持完全确定性。
+
+### 14.4 章节总结与反思（每章学完后）
+- 完成某章全部关键词后，增加一个「**章节总结 + 追问**」环节；此时显式加入「如何把本章所学**结合到你的岗位 / 实际工作场景**」类问题，帮助员工把知识落到工作中。
+- （实现排在 S3 学习闭环之后。）
