@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { PASS_THRESHOLD } from "@/lib/scoring";
 import { isChapterUnlocked } from "@/lib/schedule";
-import { getPeerNotes } from "@/lib/social";
+import { getKeywordStat, getPeerNotes } from "@/lib/social";
 import { NoteForm } from "./note-form";
 import { FollowupsForm } from "./followups-form";
 
@@ -53,6 +53,8 @@ export default async function KeywordPage({
 
   const backHref = `/learn/chapter/${keyword.chapter.index}`;
   const peerNotes = progress?.isCompleted ? await getPeerNotes(user.id, id) : null;
+  const keywordStat =
+    progress?.isCompleted ? await getKeywordStat(id, progress.bestFinalScore) : null;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -125,6 +127,12 @@ export default async function KeywordPage({
             {latest.scoring.feedback && (
               <p className="mx-auto mt-3 max-w-prose rounded-xl bg-brand-50 p-3 text-left text-sm text-ink">
                 {latest.scoring.feedback}
+              </p>
+            )}
+            {keywordStat && (
+              <p className="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-sm text-ink">
+                本词全员均分 <span className="font-bold text-brand-700">{keywordStat.avg}</span>（{keywordStat.count} 人完成）·
+                你超过了 <span className="font-bold text-accent-500">{keywordStat.beatPct}%</span> 的人
               </p>
             )}
             <p className="mt-3 text-xs text-muted">

@@ -111,6 +111,16 @@ export default async function AdminPage() {
           </div>
           <span className="text-xl">📚</span>
         </Link>
+        <Link
+          href="/admin/stats"
+          className="flex items-center justify-between rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-bold text-ink">数据统计</div>
+            <div className="text-xs text-muted">进度 / 质量 / 积分财务</div>
+          </div>
+          <span className="text-xl">📊</span>
+        </Link>
       </div>
 
       <p className="mt-8 text-center text-xs text-muted">

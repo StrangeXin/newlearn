@@ -46,6 +46,30 @@ export async function getPeerNotes(
   }));
 }
 
+/** 某关键词的全员统计（均分 / 完成人数 / 你超过多少人）。完成人数为 0 返回 null。 */
+export async function getKeywordStat(
+  keywordId: string,
+  myScore: number,
+): Promise<{ avg: number; count: number; beatPct: number } | null> {
+  const [agg, lower] = await Promise.all([
+    prisma.keywordProgress.aggregate({
+      where: { keywordId, isCompleted: true },
+      _avg: { bestFinalScore: true },
+      _count: { _all: true },
+    }),
+    prisma.keywordProgress.count({
+      where: { keywordId, isCompleted: true, bestFinalScore: { lt: myScore } },
+    }),
+  ]);
+  const count = agg._count._all;
+  if (count === 0) return null;
+  return {
+    avg: Math.round(agg._avg.bestFinalScore ?? 0),
+    count,
+    beatPct: Math.round((lower / count) * 100),
+  };
+}
+
 export interface LeaderRow {
   userId: string;
   name: string;
