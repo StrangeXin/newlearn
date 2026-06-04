@@ -7,7 +7,7 @@
 // ===========================================================================
 
 import "dotenv/config";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -46,6 +46,16 @@ function mondayWeeksAgo(weeks: number): Date {
   const dow = (d.getDay() + 6) % 7; // 0=周一 .. 6=周日
   d.setDate(d.getDate() - dow - weeks * 7);
   return d;
+}
+
+/** 读取某学科目录下所有 chapter-*.json，按 index 升序组装。 */
+function loadChapters(subjectDir: string): { chapters: SeedChapter[] } {
+  const dir = join(process.cwd(), "prisma/seed-data", subjectDir);
+  const chapters = readdirSync(dir)
+    .filter((f) => /^chapter-\d+\.json$/.test(f))
+    .map((f) => JSON.parse(readFileSync(join(dir, f), "utf-8")) as SeedChapter)
+    .sort((a, b) => a.index - b.index);
+  return { chapters };
 }
 
 const DEMO_USERS: { name: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] =
@@ -99,12 +109,10 @@ async function main() {
   }
 
   // ---- AI 学科内容 ----
+  // 每章一个独立 JSON（prisma/seed-data/ai/chapter-N.json），避免单文件过大；
+  // 目录扫描 + 按 index 排序，未来加学科只需新建对应目录。
   console.log("📚 导入 AI 学科 100 关键词…");
-  const raw = readFileSync(
-    join(process.cwd(), "prisma/seed-data/ai-keywords.json"),
-    "utf-8",
-  );
-  const data = JSON.parse(raw) as { chapters: SeedChapter[] };
+  const data = loadChapters("ai");
 
   const subject = await prisma.subject.create({
     data: {

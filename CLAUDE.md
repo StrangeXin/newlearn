@@ -53,3 +53,4 @@
 - 全站中文 UI。
 - 移动端是一等公民，不是「能看就行」。
 - 改动业务行为时同步更新 `PRD.md`；完成任务时勾选 `TASKS.md`。
+- **种子内容按章分文件**：`prisma/seed-data/<学科>/chapter-N.json`（每文件一章/20词），避免单文件过大；`seed.ts` 用 `loadChapters(学科)` 目录扫描按 index 组装。加学科只需新建目录。
