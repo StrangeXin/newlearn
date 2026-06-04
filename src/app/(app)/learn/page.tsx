@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
+import { getScheduleInfo, isChapterUnlocked } from "@/lib/schedule";
 
 export default async function LearnPage() {
   const user = await requireUser();
@@ -45,6 +46,7 @@ export default async function LearnPage() {
   const doneMap = new Map(completedByChapter.map((c) => [c.chapterId, c._count._all]));
   const totalDone = completedByChapter.reduce((s, c) => s + c._count._all, 0);
   const totalPoints = points._sum.amount ?? 0;
+  const schedule = getScheduleInfo(subject ?? null);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -75,35 +77,63 @@ export default async function LearnPage() {
         )}
       </div>
 
+      {subject && schedule.started && (
+        <p className="mt-4 text-sm text-muted">
+          已开课第 <span className="font-semibold text-brand-700">{schedule.currentWeek}</span> 周 ·
+          本周开放到第 {Math.min(schedule.currentWeek, subject.chapters.length)} 关
+        </p>
+      )}
+
       {subject && (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {subject.chapters.map((ch) => {
             const done = doneMap.get(ch.id) ?? 0;
-            return (
+            const unlocked = isChapterUnlocked(subject, ch.index);
+            const inner = (
+              <>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-white ${
+                      unlocked
+                        ? "bg-gradient-to-br from-brand-500 to-brand-700"
+                        : "bg-muted/40"
+                    }`}
+                  >
+                    {unlocked ? ch.index : "🔒"}
+                  </span>
+                  <div className="flex-1">
+                    <div className="font-bold text-ink">{ch.title}</div>
+                    <div className="text-xs text-muted">
+                      {unlocked ? `${done}/${ch._count.keywords} 已通过` : `第 ${ch.index} 周开放`}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 line-clamp-2 text-sm text-muted">{ch.theme}</p>
+                {unlocked && (
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-brand-100">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-700"
+                      style={{ width: `${(done / ch._count.keywords) * 100}%` }}
+                    />
+                  </div>
+                )}
+              </>
+            );
+            return unlocked ? (
               <Link
                 key={ch.id}
                 href={`/learn/chapter/${ch.index}`}
                 className="group rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white">
-                    {ch.index}
-                  </span>
-                  <div className="flex-1">
-                    <div className="font-bold text-ink">{ch.title}</div>
-                    <div className="text-xs text-muted">
-                      {done}/{ch._count.keywords} 已通过
-                    </div>
-                  </div>
-                </div>
-                <p className="mt-3 line-clamp-2 text-sm text-muted">{ch.theme}</p>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-brand-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-700"
-                    style={{ width: `${(done / ch._count.keywords) * 100}%` }}
-                  />
-                </div>
+                {inner}
               </Link>
+            ) : (
+              <div
+                key={ch.id}
+                className="cursor-not-allowed rounded-2xl border border-dashed border-brand-200 bg-white/40 p-5 opacity-70"
+              >
+                {inner}
+              </div>
             );
           })}
         </div>

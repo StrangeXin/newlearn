@@ -247,7 +247,8 @@ async function main() {
   const subject = await prisma.subject.create({
     data: {
       title: "人工智能",
-      startDate: mondayWeeksAgo(4),
+      // 2 周前开课 → 当前第 3 周：第 1–3 关开放、4–5 关锁定（便于演示周解锁）
+      startDate: mondayWeeksAgo(2),
     },
   });
 

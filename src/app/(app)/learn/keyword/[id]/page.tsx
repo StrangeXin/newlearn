@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { PASS_THRESHOLD } from "@/lib/scoring";
+import { isChapterUnlocked } from "@/lib/schedule";
 import { NoteForm } from "./note-form";
 import { FollowupsForm } from "./followups-form";
 
@@ -19,9 +20,12 @@ export default async function KeywordPage({
 
   const keyword = await prisma.keyword.findUnique({
     where: { id },
-    include: { chapter: true },
+    include: { chapter: { include: { subject: { select: { startDate: true } } } } },
   });
   if (!keyword) notFound();
+  if (!isChapterUnlocked(keyword.chapter.subject, keyword.chapter.index)) {
+    redirect("/learn");
+  }
 
   if (user.role === "EMPLOYEE") {
     const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });

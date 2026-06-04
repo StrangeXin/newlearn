@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
+import { isChapterUnlocked } from "@/lib/schedule";
 
 export default async function ChapterPage({
   params,
@@ -25,9 +26,25 @@ export default async function ChapterPage({
 
   const chapter = await prisma.chapter.findFirst({
     where: { subjectId: cfg.activeSubjectId, index: chapterIndex },
-    include: { keywords: { orderBy: { orderIndex: "asc" } } },
+    include: {
+      keywords: { orderBy: { orderIndex: "asc" } },
+      subject: { select: { startDate: true } },
+    },
   });
   if (!chapter) notFound();
+
+  if (!isChapterUnlocked(chapter.subject, chapter.index)) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <Link href="/learn" className="text-sm text-muted hover:text-brand-700">
+          ← 闯关地图
+        </Link>
+        <div className="mt-10 text-5xl">🔒</div>
+        <h1 className="mt-4 text-2xl font-extrabold text-ink">第 {chapter.index} 关尚未开放</h1>
+        <p className="mt-2 text-muted">每周开放一关，第 {chapter.index} 周才解锁本关，先把已开放的关卡通关吧。</p>
+      </main>
+    );
+  }
 
   const progresses = await prisma.keywordProgress.findMany({
     where: { userId: user.id, keywordId: { in: chapter.keywords.map((k) => k.id) } },

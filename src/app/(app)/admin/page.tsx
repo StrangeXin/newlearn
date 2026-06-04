@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
+import { getScheduleInfo } from "@/lib/schedule";
+import { ScheduleControls } from "./schedule-controls";
 
 function StatCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -46,6 +48,21 @@ export default async function AdminPage() {
         <StatCard label="已激活账号" value={activatedCount} />
         <StatCard label="关键词总数" value={keywordCount} />
       </div>
+
+      {cfg?.activeSubject && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm">
+          <div>
+            <div className="font-bold text-ink">
+              周期：第 {getScheduleInfo(cfg.activeSubject).currentWeek} 周
+              <span className="ml-2 text-xs font-normal text-muted">
+                （本周开放到第 {getScheduleInfo(cfg.activeSubject).currentWeek} 关）
+              </span>
+            </div>
+            <div className="text-xs text-muted">演示用：快进/回退会移动开始日，改变当前周与解锁进度</div>
+          </div>
+          <ScheduleControls />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <Link
