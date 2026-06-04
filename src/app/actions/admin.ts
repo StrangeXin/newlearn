@@ -2,9 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/user";
+import { requireAdmin, requireSuperadmin } from "@/lib/auth/user";
+import { hashPassword } from "@/lib/auth/password";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+function defaultPassword(): string {
+  return process.env.DEFAULT_PASSWORD ?? "Aa123456!";
+}
 
 export interface AdminState {
   error?: string;
@@ -29,5 +34,134 @@ export async function shiftWeeksAction(deltaWeeks: number): Promise<AdminState> 
   await prisma.subject.update({ where: { id: subject.id }, data: { startDate: next } });
   revalidatePath("/admin");
   revalidatePath("/learn");
+  return { ok: true };
+}
+
+// ----------------------------- 名单 / 角色 -----------------------------
+
+/** 添加单个员工（姓名+角色）。 */
+export async function addUserAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "").trim();
+  const role = String(formData.get("role") ?? "EMPLOYEE");
+  if (!name) return { error: "请填写姓名" };
+  const loginName = name.toLowerCase();
+  const exists = await prisma.user.findUnique({ where: { loginName } });
+  if (exists) return { error: "该姓名已存在" };
+  await prisma.user.create({
+    data: {
+      loginName,
+      name,
+      role: role === "ADMIN" ? "ADMIN" : "EMPLOYEE",
+      passwordHash: await hashPassword(defaultPassword()),
+      mustChangePassword: true,
+      isActivated: false,
+    },
+  });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/** 批量导入员工（每行一个姓名，已存在的跳过）。 */
+export async function importUsersAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const text = String(formData.get("names") ?? "");
+  const names = [...new Set(text.split(/[\n,，]/).map((s) => s.trim()).filter(Boolean))];
+  if (names.length === 0) return { error: "请粘贴姓名（每行一个）" };
+  const hash = await hashPassword(defaultPassword());
+  let added = 0;
+  for (const name of names) {
+    const loginName = name.toLowerCase();
+    const exists = await prisma.user.findUnique({ where: { loginName } });
+    if (exists) continue;
+    await prisma.user.create({
+      data: { loginName, name, role: "EMPLOYEE", passwordHash: hash, mustChangePassword: true, isActivated: false },
+    });
+    added += 1;
+  }
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/** 重置某员工密码为默认密码并要求改密。 */
+export async function resetPasswordAction(userId: string): Promise<AdminState> {
+  await requireAdmin();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(defaultPassword()), mustChangePassword: true },
+  });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/** 超管设置某用户角色（提升/降为管理员/员工）。 */
+export async function setRoleAction(userId: string, role: string): Promise<AdminState> {
+  const me = await requireSuperadmin();
+  if (userId === me.id) return { error: "不能修改自己的角色" };
+  const target = role === "ADMIN" ? "ADMIN" : role === "SUPERADMIN" ? "SUPERADMIN" : "EMPLOYEE";
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: target, roleChangedById: me.id, roleChangedAt: new Date() },
+  });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+// ----------------------------- 学科 / 内容 -----------------------------
+
+/** 设为当前活跃学科。 */
+export async function setActiveSubjectAction(subjectId: string): Promise<AdminState> {
+  await requireAdmin();
+  await prisma.activeSubjectConfig.upsert({
+    where: { singletonId: "GLOBAL" },
+    create: { singletonId: "GLOBAL", activeSubjectId: subjectId },
+    update: { activeSubjectId: subjectId },
+  });
+  revalidatePath("/admin/content");
+  revalidatePath("/learn");
+  return { ok: true };
+}
+
+/** 设置当前学科开始日（YYYY-MM-DD）。 */
+export async function setStartDateAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const cfg = await prisma.activeSubjectConfig.findUnique({
+    where: { singletonId: "GLOBAL" },
+    select: { activeSubjectId: true },
+  });
+  if (!cfg?.activeSubjectId) return { error: "当前没有活跃学科" };
+  const dateStr = String(formData.get("startDate") ?? "");
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return { error: "日期无效" };
+  await prisma.subject.update({ where: { id: cfg.activeSubjectId }, data: { startDate: d } });
+  revalidatePath("/admin/content");
+  revalidatePath("/learn");
+  return { ok: true };
+}
+
+/** 编辑关键词（简介 / 参考考核要点）。 */
+export async function updateKeywordAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const id = String(formData.get("keywordId") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  const referencePoints = String(formData.get("referencePoints") ?? "").trim();
+  if (!id) return { error: "缺少关键词" };
+  await prisma.keyword.update({
+    where: { id },
+    data: { description: description || null, referencePoints: referencePoints || null },
+  });
+  revalidatePath("/admin/content");
   return { ok: true };
 }

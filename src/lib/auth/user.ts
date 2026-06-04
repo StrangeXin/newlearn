@@ -24,6 +24,13 @@ export async function requireAdmin(): Promise<User> {
   return user;
 }
 
+/** 要求超管，否则跳管理后台。 */
+export async function requireSuperadmin(): Promise<User> {
+  const user = await requireAdmin();
+  if (user.role !== "SUPERADMIN") redirect("/admin");
+  return user;
+}
+
 export function homePathForRole(role: string): string {
   return role === "EMPLOYEE" ? "/learn" : "/admin";
 }

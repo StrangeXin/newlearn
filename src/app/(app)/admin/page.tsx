@@ -91,6 +91,26 @@ export default async function AdminPage() {
           </div>
           <span className="text-xl">🏆</span>
         </Link>
+        <Link
+          href="/admin/users"
+          className="flex items-center justify-between rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-bold text-ink">员工名单</div>
+            <div className="text-xs text-muted">导入员工 / 角色 / 重置密码</div>
+          </div>
+          <span className="text-xl">👥</span>
+        </Link>
+        <Link
+          href="/admin/content"
+          className="flex items-center justify-between rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-bold text-ink">学科与内容</div>
+            <div className="text-xs text-muted">切换学科 / 开始日 / 关键词</div>
+          </div>
+          <span className="text-xl">📚</span>
+        </Link>
       </div>
 
       <p className="mt-8 text-center text-xs text-muted">
