@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: newlearn-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: newlearn
+      POSTGRES_PASSWORD: newlearn
+      POSTGRES_DB: newlearn
+    # 主机 5432 已被本机原生 Postgres 占用，这里映射到 5433 避免冲突
+    ports:
+      - "5433:5432"
+    volumes:
+      - newlearn-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newlearn -d newlearn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  newlearn-pgdata:

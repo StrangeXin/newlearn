@@ -1,0 +1,135 @@
+// ===========================================================================
+// src/lib/scoring/types.ts
+// 打分服务的契约与类型定义（对应 PRD §6 两段式学习闭环、§6.1 评分 rubric、
+// §13 数据模型中的 Scoring.followups[] / Scoring.answers[]）。
+//
+// 设计说明：
+// - 该模块只描述「契约」，不含任何实现细节。业务代码仅依赖此处的类型与接口，
+//   不感知具体走的是 DeepSeekScoringService（生产）还是 MockScoringService（测试/演示），
+//   由 SCORING_PROVIDER 环境变量切换（见 CLAUDE.md / PRD §2）。
+// - 所有分数均为 1–100 的整数；及格线为 finalScore >= 60（见 PRD §6 步骤 7）。
+// ===========================================================================
+
+/** 关键词（与 §13 数据模型 Keyword 对齐，仅取打分所需字段）。 */
+export interface Keyword {
+  /** 关键词本身，例如「Transformer」。 */
+  term: string;
+  /** 可选简介，给学习者看的上下文。 */
+  description?: string;
+  /**
+   * 可选「参考考核要点」。若提供，作为打分的额外上下文，
+   * 用于提升打分准确度（见 PRD §5.1 / §6.1）；不填则由打分器自由判断。
+   */
+  referencePoints?: string[];
+}
+
+/** 单条评分维度（rubric）。所有维度的 weight 之和应为 1。 */
+export interface RubricDimension {
+  /** 维度名，例如「准确性」。 */
+  name: string;
+  /** 权重，0–1，且全部维度之和 = 1。 */
+  weight: number;
+  /** 该维度的中文释义，会注入到 DeepSeek 的 system prompt 中。 */
+  description: string;
+}
+
+// --------------------------- submitNote（第一段） ---------------------------
+
+/** submitNote 的输入：原始笔记 + 关键词上下文。 */
+export interface SubmitNoteInput {
+  /** 学习者提交的纯文本笔记（业务层已校验 100–5000 字，见 PRD §6 步骤 2）。 */
+  note: string;
+  /** 当前关键词及其可选参考要点。 */
+  keyword: Keyword;
+}
+
+/** submitNote 的输出：初始分 + 动态追问。 */
+export interface SubmitNoteResult {
+  /** 初始分，1–100 的整数。 */
+  initialScore: number;
+  /**
+   * 根据笔记薄弱点动态生成的追问，数量为 1–3 个；
+   * 笔记越完整、问得越少（见 PRD §6 步骤 4）。
+   */
+  followups: string[];
+}
+
+// ---------------------------- finalize（第二段） ----------------------------
+
+/** finalize 的输入：原笔记 + 关键词 + 追问及其回答。 */
+export interface FinalizeInput {
+  /** 与第一段相同的原始笔记。 */
+  note: string;
+  /** 与第一段相同的关键词上下文。 */
+  keyword: Keyword;
+  /** 第一段产生的追问（保持顺序）。 */
+  followups: string[];
+  /**
+   * 学习者对追问的逐条回答，与 followups 按下标一一对应；
+   * 若某条未作答，约定传入空字符串占位以保持对齐。
+   */
+  answers: string[];
+}
+
+/** finalize 的输出：最终分 + 是否及格 + 中文反馈。 */
+export interface FinalizeResult {
+  /** 最终分，1–100 的整数，在初始分基础上结合追问回答微调而来。 */
+  finalScore: number;
+  /** 是否及格：finalScore >= 60（见 PRD §6 步骤 7）。 */
+  passed: boolean;
+  /** 面向学习者的中文反馈（鼓励 + 可改进点）。 */
+  feedback: string;
+}
+
+// -------------------------------- 服务接口 ---------------------------------
+
+/**
+ * 打分服务统一抽象。生产实现为 DeepSeekScoringService，
+ * 测试与本地演示实现为 MockScoringService，通过 SCORING_PROVIDER 切换。
+ */
+export interface ScoringService {
+  /** 第一段：对笔记打初始分并生成 1–3 个追问。 */
+  submitNote(input: SubmitNoteInput): Promise<SubmitNoteResult>;
+
+  /** 第二段：综合原笔记与追问回答给出最终分、是否及格与中文反馈。 */
+  finalize(input: FinalizeInput): Promise<FinalizeResult>;
+}
+
+/**
+ * 通用评分维度，权重之和 = 1（见 PRD §6.1）。
+ * DeepSeek 实现会把它注入 prompt；Mock 实现可用它做加权启发式。
+ */
+export const RUBRIC_DIMENSIONS: readonly RubricDimension[] = [
+  {
+    name: "准确性",
+    weight: 0.3,
+    description:
+      "对关键词概念、定义与事实的表述是否正确无硬伤，有无张冠李戴或过时信息。",
+  },
+  {
+    name: "深度",
+    weight: 0.25,
+    description:
+      "是否超越表面定义，触及原理、机制、权衡取舍或与其它概念的关联。",
+  },
+  {
+    name: "完整性",
+    weight: 0.2,
+    description:
+      "是否覆盖该关键词的核心要点（若提供参考考核要点，则以其为基准衡量覆盖度）。",
+  },
+  {
+    name: "条理性",
+    weight: 0.15,
+    description: "结构是否清晰、层次分明、表达连贯，便于阅读与理解。",
+  },
+  {
+    name: "原创思考",
+    weight: 0.1,
+    description:
+      "是否包含个人理解、举例、类比或批判性见解，而非纯粹复制资料。",
+  },
+];
+
+/** 及格分数线（见 PRD §6 步骤 7）。 */
+export const PASS_THRESHOLD = 60;

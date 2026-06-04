@@ -7,26 +7,28 @@
 ---
 
 ## S0 · 项目骨架（Walking Skeleton）
-**目标**：一个能跑起来、能连库、能部署的空壳。
-- [ ] 初始化 Next.js（App Router, TypeScript）+ Tailwind
-- [ ] 接入 Prisma + Postgres，跑通一次空 migration
-- [ ] 全局布局、字体、明亮色主题基调；响应式断点骨架（PC/移动）
-- [ ] `.env` 约定（`DATABASE_URL`、`DEEPSEEK_API_KEY`、`SCORING_PROVIDER=mock|deepseek`）
-- [ ] 部署配置（Vercel 或 Node 主机）+ 一个 health 页面
-**验收**：本地 `dev` 起站，首页渲染，DB 连接成功，migration 可执行。
+**目标**：一个能跑起来、能连库、能部署的空壳。 ✅ 已完成
+- [x] 初始化 Next.js 16（App Router, TypeScript）+ Tailwind 4
+- [x] 接入 Prisma 7 + Postgres（Docker，主机 5433 避开本机原生 PG），跑通 migration
+- [x] 全局布局、字体、明亮游戏化主题；响应式骨架；品牌化首页
+- [x] `.env` 约定（`DATABASE_URL`、`DEEPSEEK_API_KEY`、`SCORING_PROVIDER`、`AUTH_SECRET`、`DEFAULT_PASSWORD`）
+- [x] docker-compose、README、package 脚本（db:up/migrate/seed/test/typecheck）
+**验收**：✅ `dev` 首页 200；`build` 通过；DB 连接成功；migration 已执行。
 **依赖**：无。
 
 ---
 
-## S1 · 数据模型 + 种子数据
+## S1 · 数据模型 + 种子数据 ✅（演示答题数据待 S3 后补）
 **目标**：PRD §13 全部实体落为 Prisma schema，并有可演示的真实数据。
-- [ ] Prisma schema：User / Subject / Chapter / Keyword / Submission / Scoring / KeywordProgress / PointsLedger / RankingResult / Redemption
-- [ ] 生成并执行 migration
-- [ ] 种子脚本：预置超管 + 样例管理员 + 若干样例员工（共享默认密码 `Aa123456!`）
-- [ ] 种子脚本：生成真实「AI 行业 100 关键词 + 5 章主题」入库
-- [ ] 种子脚本：部分已答题 / 积分 / 排名 演示数据
-**验收**：`seed` 一键跑通，数据可查询，100 词分 5 章正确归位。
+- [x] Prisma schema：全部实体（经对抗式评审，含幂等积分流水、活跃学科单例、规范化登录名等强化）
+- [x] 生成并执行 migration（13 张表）
+- [x] 种子脚本：超管 + 管理员 + 8 名员工（共享默认密码 `Aa123456!`，首登强制改密）
+- [x] 种子脚本：真实「AI 行业 100 关键词 + 5 章主题」入库 + 激活当前学科
+- [ ] 种子脚本：部分已答题 / 积分 / 排名 演示数据（待 S3 学习闭环就绪后补）
+**验收**：✅ `seed` 一键跑通；10 账号 / 5 章 / 100 词 / 已激活学科，数据已校验。
 **依赖**：S0。
+
+> 📦 **额外**：打分库已随地基预建（S3/S4 的 lib 部分）——`ScoringService` 接口、确定性 `MockScoringService`、`DeepSeekScoringService`、按 `SCORING_PROVIDER` 切换的工厂，6 个单测全绿。剩 S3 的 UI 与闭环编排、S4 的真实联调待做。
 
 ---
 

@@ -1,0 +1,434 @@
+// ============================================================================
+// AI 学习平台 · Prisma Schema（评审修订版）
+// 多学科可扩展的游戏化内部学习系统
+// ============================================================================
+
+// Prisma 7：连接串改由 prisma.config.ts 的 datasource.url 提供，schema 内不再写 url
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// ============================================================================
+// 枚举
+// ============================================================================
+
+enum Role {
+  EMPLOYEE
+  ADMIN
+  SUPERADMIN
+}
+
+/// 一次提交（笔记+评分流程）的状态
+enum SubmissionStatus {
+  PENDING_INITIAL // 已提交笔记，等待初始打分
+  AWAITING_ANSWERS // 已出初始分与追问，等待员工回答追问
+  COMPLETED // 已完成终评（拿到 finalScore）
+  FAILED // AI 调用失败（草稿保留，可重试，不计入历史）
+}
+
+enum RedemptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// 积分流水类型
+enum LedgerType {
+  BASE // 关键词通过的基础积分（+1）
+  RANK_BONUS // 章节 top3 排名奖励（+100）
+  REDEEM // 兑换扣减（amount 为负）
+}
+
+// ============================================================================
+// 用户 / 身份
+// ============================================================================
+
+model User {
+  id                 String    @id @default(cuid())
+  /// 规范化登录名（导入时 trim + casefold 后写入），全局唯一，作为唯一登录凭据，
+  /// 消除「张三」与「张三 」/ 大小写差异并存导致的登录歧义。
+  loginName          String    @unique
+  /// 展示用姓名（保留原始大小写/空格），用于排行榜公开展示，不用于登录唯一性判定。
+  name               String
+  passwordHash       String
+  /// 首登强制改密标志，激活后改密置 false
+  mustChangePassword Boolean   @default(true)
+  /// 头像 URL，可选；公开排行榜展示
+  avatar             String?
+  role               Role      @default(EMPLOYEE)
+  /// 白名单激活态：预导入为 false，首次成功登录后置 true
+  isActivated        Boolean   @default(false)
+  /// 导入者（预导入白名单留痕）；系统/脚本导入可为 null
+  createdById        String?
+  /// 最近一次角色变更操作者（超管提升他人留痕）；从未变更为 null
+  roleChangedById    String?
+  /// 最近一次角色变更时间；从未变更为 null
+  roleChangedAt      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // 反向关系
+  submissions         Submission[]
+  keywordProgresses   KeywordProgress[]
+  pointsLedgers       PointsLedger[]
+  rankingResults      RankingResult[]
+  redemptions         Redemption[]      @relation("RedemptionApplicant")
+  reviewedRedemptions Redemption[]      @relation("RedemptionReviewer")
+
+  // 审计：导入者 / 角色变更者（自引用）
+  createdBy        User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers     User[] @relation("UserCreatedBy")
+  roleChangedBy    User?  @relation("UserRoleChangedBy", fields: [roleChangedById], references: [id], onDelete: SetNull)
+  roleChangedUsers User[] @relation("UserRoleChangedBy")
+
+  @@index([role])
+  @@map("users")
+}
+
+// ============================================================================
+// 当前活跃学科单例（强约束「全公司至多一个活跃学科」）
+// ============================================================================
+//
+// 评审问题：Boolean isActive + 普通索引无法在 DB 层保证「全公司至多一个 isActive=true」，
+// 并发激活可能产生两个活跃学科。
+//
+// 修复：用单例配置表保证唯一性 —— singletonId 固定为常量（如 "GLOBAL"）并 @@id，
+// activeSubjectId 指向当前活跃学科。整表至多一行，因此「当前学科」全局唯一、无二义。
+// Subject 不再用 isActive 布尔表达「当前」，避免多真值；如需历史/未来学科状态仍可
+// 用 startDate / archivedAt 区分。
+model ActiveSubjectConfig {
+  /// 单例主键，业务上固定写入常量 "GLOBAL"，保证整表至多一行
+  singletonId     String   @id @default("GLOBAL")
+  /// 当前全公司统一指定的活跃学科；尚未指定为 null
+  activeSubjectId String?  @unique
+  updatedAt       DateTime @updatedAt
+  /// 最近一次指定/切换操作者（管理员留痕）
+  updatedById     String?
+
+  activeSubject Subject? @relation(fields: [activeSubjectId], references: [id], onDelete: SetNull)
+
+  @@map("active_subject_config")
+}
+
+// ============================================================================
+// 内容层级：Subject -> Chapter -> Keyword
+// ============================================================================
+
+model Subject {
+  id         String    @id @default(cuid())
+  title      String    @unique
+  /// 学科开启日（管理员开启时设置；用于推导自然周 weekIndex 与顺序解锁）；未开启为 null
+  startDate  DateTime?
+  /// 归档/下线时间；下线后不再作为可激活学科。null 表示仍可用
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // 反向关系
+  chapters       Chapter[]
+  pointsLedgers  PointsLedger[]
+  rankingResults RankingResult[]
+  redemptions    Redemption[]
+  /// 反向：被哪个单例配置引用为当前活跃学科（至多一个）
+  activeConfig   ActiveSubjectConfig?
+
+  @@map("subjects")
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  subjectId String
+  /// 章节序号 1..5（每学科固定 5 章，硬性 1..5 由 service 层校验）；第 N 周解锁第 N 章
+  index     Int
+  title     String
+  /// 章节主题（从起源到最新趋势的编排脉络）
+  theme     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  // 反向关系
+  keywords        Keyword[]
+  rankingResults  RankingResult[]
+  keywordProgress KeywordProgress[]
+
+  /// 同一学科内章节序号唯一（配合 service 校验 1..5 保证恰好 5 章）
+  @@unique([subjectId, index])
+  @@index([subjectId])
+  @@map("chapters")
+}
+
+model Keyword {
+  id              String   @id @default(cuid())
+  chapterId       String
+  /// 关键词（每章固定 20 个，全学科共 100 个；20/章 由 service 层校验）
+  term            String
+  /// 可选简介
+  description     String?
+  /// 可选「参考考核要点」，辅助 AI 打分；不填则 AI 自由判断
+  referencePoints String?
+  /// 关键词在章内的展示顺序（用于闯关地图排序）
+  orderIndex      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  // 反向关系
+  submissions     Submission[]
+  keywordProgress KeywordProgress[]
+
+  /// 同一章内关键词不重复
+  @@unique([chapterId, term])
+  @@index([chapterId])
+  @@map("keywords")
+}
+
+// ============================================================================
+// 学习闭环：Submission（一次提交） + Scoring（一次评分流程）
+// ============================================================================
+
+model Submission {
+  id         String           @id @default(cuid())
+  userId     String
+  keywordId  String
+  /// 学习笔记纯文本（业务层校验 100~5000 字）
+  noteText   String
+  status     SubmissionStatus @default(PENDING_INITIAL)
+  /// 终评时回填的最终分快照（1-100）；冗余自 Scoring.finalScore，便于「同伴可见性」按分降序无需 join。
+  /// 仅 status=COMPLETED 时非空。
+  finalScore Int?
+  /// 终评时回填：最终分 >= 60 视为通过。冗余自 Scoring，便于过滤与展示。
+  isPassed   Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  /// 一次提交对应一次评分流程（初分→追问→终评）
+  scoring Scoring?
+
+  /// 反向：被某条 KeywordProgress 标记为「最佳笔记」（同伴可见性直达最佳记录）
+  bestOfProgress KeywordProgress? @relation("BestSubmission")
+
+  // 支撑「按用户」「按关键词」查询
+  @@index([userId])
+  @@index([keywordId])
+  @@index([userId, keywordId])
+  // 同伴可见性：他人该词「已完成」记录按最终分降序（status 过滤 + finalScore 排序，无需 join Scoring）
+  @@index([keywordId, status, finalScore])
+  @@map("submissions")
+}
+
+model Scoring {
+  id           String   @id @default(cuid())
+  submissionId String   @unique
+  /// DeepSeek 初始分 1-100
+  initialScore Int
+  /// 综合「原笔记+追问回答」后的最终分 1-100；终评前为 null。
+  /// 通过与否（>=60）为本字段的纯派生量，不再独立持久化 isPassed，避免脏数据/失同步。
+  finalScore   Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  /// 1-3 个动态追问（含问题与员工回答），独立建模便于按条查询/统计追问难度
+  followups Followup[]
+
+  @@map("scorings")
+}
+
+/// 追问：DeepSeek 按笔记薄弱点动态生成 1-3 个，员工逐一作答
+model Followup {
+  id        String   @id @default(cuid())
+  scoringId String
+  /// 追问在本次评分中的序号 1..3
+  order     Int
+  /// 追问问题
+  question  String
+  /// 员工回答；未答为 null
+  answer    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scoring Scoring @relation(fields: [scoringId], references: [id], onDelete: Cascade)
+
+  @@unique([scoringId, order])
+  @@index([scoringId])
+  @@map("followups")
+}
+
+// ============================================================================
+// 进度（取最高分）
+// ============================================================================
+
+model KeywordProgress {
+  id               String    @id @default(cuid())
+  userId           String
+  keywordId        String
+  /// 冗余 chapterId（来自 Keyword.chapter），支撑「某用户某章已完成词数」高效计数与排名资格判定，
+  /// 无需 join Keyword→Chapter。
+  chapterId        String
+  /// 冗余 subjectId（来自 Chapter.subject），支撑按学科聚合统计。
+  subjectId        String
+  /// 历史最高最终分（多次重提取最高）
+  bestFinalScore   Int       @default(0)
+  /// 取得最高分的那次提交（同伴可见性可直达最佳笔记）；未有完成提交为 null
+  bestSubmissionId String?   @unique
+  /// 是否已通过（bestFinalScore >= 60）
+  isCompleted      Boolean   @default(false)
+  /// 首次通过时间；未通过为 null。周排名资格用 completedAt <= 当周周日截止 判定。
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword        Keyword     @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  chapter        Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  bestSubmission Submission? @relation("BestSubmission", fields: [bestSubmissionId], references: [id], onDelete: SetNull)
+
+  /// 反向：基础分流水（至多一条，由 PointsLedger 唯一约束保证幂等）
+  pointsLedgers PointsLedger[]
+
+  /// 每个用户对每个关键词仅一条进度
+  @@unique([userId, keywordId])
+  @@index([userId])
+  @@index([keywordId])
+  // 同伴可见性反查（谁已完成某词）
+  @@index([keywordId, isCompleted])
+  // 排名资格：某用户某章完成词数高效计数
+  @@index([userId, chapterId, isCompleted])
+  // 结算口径：某章按首次通过时间过滤（completedAt <= 当周周日）
+  @@index([chapterId, completedAt])
+  @@map("keyword_progresses")
+}
+
+// ============================================================================
+// 积分流水（余额由流水求和得出）
+// ============================================================================
+//
+// 评审问题：原 refId 是无约束的自由字符串，无法在 DB 层保证「一条来源至多产生一条流水」，
+// 审批/终评/结算在重试或并发下会重复发分/重复扣分，破坏对账与「单学科最多 100 基础分」上限。
+//
+// 修复：把来源 id 提升为真正的可空外键，并对每种来源加唯一约束实现幂等：
+//   BASE       -> keywordProgressId，@@unique([type, keywordProgressId])：每个进度至多一条基础分
+//   RANK_BONUS -> rankingResultId，  @@unique([type, rankingResultId])：每条排名结果至多一条奖励
+//   REDEEM     -> redemptionId，      @@unique([type, redemptionId])：每笔兑换至多一条扣减
+// （Postgres 中 NULL 不参与唯一冲突，故同一行只填对应来源 id、其余为 null，三条约束互不干扰。）
+model PointsLedger {
+  id                String     @id @default(cuid())
+  userId            String
+  /// 积分按学科独立核算
+  subjectId         String
+  type              LedgerType
+  /// 变动积分：BASE=+1，RANK_BONUS=+100，REDEEM 为负
+  amount            Int
+  /// 来源外键（幂等键）——按 type 只填其一：
+  /// BASE 通过的关键词进度
+  keywordProgressId String?
+  /// RANK_BONUS 对应的排名结算结果
+  rankingResultId   String?
+  /// REDEEM 对应的兑换申请
+  redemptionId      String?
+  /// 备注，可选
+  memo              String?
+  createdAt         DateTime   @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject         Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  keywordProgress KeywordProgress? @relation(fields: [keywordProgressId], references: [id], onDelete: SetNull)
+  rankingResult   RankingResult?   @relation(fields: [rankingResultId], references: [id], onDelete: SetNull)
+  redemption      Redemption?      @relation(fields: [redemptionId], references: [id], onDelete: SetNull)
+
+  // 幂等约束：每种来源至多一条流水
+  @@unique([type, keywordProgressId])
+  @@unique([type, rankingResultId])
+  @@unique([type, redemptionId])
+  // 支撑「按用户求余额」「按用户+学科求余额」「按类型统计」
+  @@index([userId])
+  @@index([userId, subjectId])
+  @@index([subjectId, type])
+  @@map("points_ledgers")
+}
+
+// ============================================================================
+// 周排名结算结果
+// ============================================================================
+
+model RankingResult {
+  id            String    @id @default(cuid())
+  subjectId     String
+  chapterId     String
+  /// 自然周序号（由 Subject.startDate 推导，从 1 开始）
+  weekIndex     Int
+  /// 结算所属自然周的周一 00:00（结算快照时间，便于历史审计与「错过不补」时间判定，不必每次由 weekIndex 反推）
+  weekStartDate DateTime
+  userId        String
+  /// 该章 20 词最终分平均值（结算时刻的 bestFinalScore 快照均值）
+  avgScore      Float
+  /// 名次（1/2/3）；并列同名次
+  rank          Int
+  /// 是否已发放排名奖励（并列均给，不稀释）
+  bonusAwarded  Boolean   @default(false)
+  /// 实际发放分值（默认 100；写入 RANK_BONUS 流水的金额，使 RankingResult 自身可独立对账）
+  bonusPoints   Int       @default(0)
+  /// 结算/发奖完成时间（周日夜结算快照时间）；未结算为 null
+  settledAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// 反向：对应的 RANK_BONUS 流水（至多一条）
+  pointsLedgers PointsLedger[]
+
+  /// 同一学科+章节+周次+用户仅一条结算结果（防重复结算）
+  @@unique([subjectId, chapterId, weekIndex, userId])
+  @@index([subjectId, chapterId, weekIndex])
+  @@index([userId])
+  @@map("ranking_results")
+}
+
+// ============================================================================
+// 兑换申请
+// ============================================================================
+
+model Redemption {
+  id           String           @id @default(cuid())
+  userId       String
+  /// 兑换物品/工具名称
+  item         String
+  /// 兑换金额（=扣减积分数，正整数）
+  amount       Int
+  /// 该兑换所属学科（积分按学科独立核算，扣减须落在对应学科账上）
+  subjectId    String
+  /// 凭证/链接，可选
+  attachment   String?
+  status       RedemptionStatus @default(PENDING)
+  /// 审批人（管理员）；未审批为 null
+  reviewedById String?
+  /// 审批时间；未审批为 null
+  reviewedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user       User    @relation("RedemptionApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User?   @relation("RedemptionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  subject    Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  /// 反向：审批通过生成的 REDEEM 扣减流水（至多一条，由 PointsLedger 唯一约束保证幂等）
+  pointsLedgers PointsLedger[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("redemptions")
+}
