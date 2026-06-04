@@ -23,9 +23,17 @@
 
 ## 环境变量约定
 
-- `DATABASE_URL` — Postgres 连接串
+- `DATABASE_URL` — Postgres 连接串（本地：`localhost:5433`）
 - `DEEPSEEK_API_KEY` — DeepSeek 密钥（放 `.env`，**绝不入库**）
 - `SCORING_PROVIDER` — `mock` | `deepseek`
+
+## 环境/工具坑（本项目实测，省得重踩）
+
+- **本地 DB 端口是 5433，不是 5432**：本机有原生 Postgres 占着 `127.0.0.1:5432`，`localhost` 会优先命中它导致 Prisma P1010 鉴权失败。docker-compose 已映射到 5433。
+- **Prisma 7 运行时必须用 driver adapter**：`new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) })`。**不支持** `datasourceUrl`/裸 `new PrismaClient()`；客户端也不会自动读 env。统一用 `@/lib/db` 的单例。
+- **Prisma 7 generator 是 `prisma-client`**（输出 `src/generated/prisma`，已 gitignore），连接串在 `prisma.config.ts`（dotenv）里给 CLI 用；客户端从 `@/generated/prisma/client` 导入。
+- **种子/脚本用 tsx 跑**需自己 `import "dotenv/config"`（tsx 不自动加载 .env）。
+- **pnpm 11 构建脚本**：原生包（sharp/prisma/esbuild/pg 等）需在 `pnpm-workspace.yaml` 的 `allowBuilds` 里置 `true`。
 
 ## 关键业务规则（最易踩坑，务必遵守 PRD）
 
