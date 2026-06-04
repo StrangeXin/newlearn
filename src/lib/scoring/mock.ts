@@ -20,6 +20,9 @@ import {
   Keyword,
   LearnerMemoryTags,
   PASS_THRESHOLD,
+  ReflectionQuestionsInput,
+  ReflectionSummaryInput,
+  ReflectionSummaryResult,
   RUBRIC_DIMENSIONS,
   ScoringService,
   SubmitNoteInput,
@@ -229,6 +232,31 @@ export class MockScoringService implements ScoringService {
 
     const portrait = buildPortrait(input.learner.profile, tags, term, input.finalScore);
     return { tags, portrait };
+  }
+
+  async reflectionQuestions(input: ReflectionQuestionsInput): Promise<string[]> {
+    const pos = input.learner?.profile?.position ?? "你的岗位";
+    const apply = input.learner?.profile?.applicationAreas?.trim();
+    const qs = [
+      `学完《${input.chapterTitle}》后，作为「${pos}」，本章哪个概念最可能用在你的日常工作中？打算怎么用？`,
+      apply
+        ? `这一章的知识，能帮你在「${apply}」上做出哪些具体改进？`
+        : `这一章的知识，能帮你的实际工作做出哪些具体改进？`,
+      `本章还有哪些没搞透、或想进一步深入的地方？`,
+    ];
+    return qs.slice(0, 3);
+  }
+
+  async reflectionSummary(input: ReflectionSummaryInput): Promise<ReflectionSummaryResult> {
+    const pos = input.learner.profile?.position ?? "员工";
+    const answered = input.answers.filter((a) => a.trim().length > 0).length;
+    const summary =
+      `已完成《${input.chapterTitle}》的章节反思（回答 ${answered}/${input.questions.length} 题）。` +
+      `你开始把本章关键概念与「${pos}」岗位结合思考，建议挑一个点在实际工作中试着落地。`;
+    const prevPortrait = input.learner.memory?.portrait ?? "";
+    const portrait =
+      `${prevPortrait}\n\n## 《${input.chapterTitle}》章节反思\n- ${summary}`.trim();
+    return { summary, portrait };
   }
 }
 

@@ -139,6 +139,31 @@ export interface UpdateMemoryResult {
   portrait: string;
 }
 
+// --------------------------- 章节反思（结合岗位） ---------------------------
+
+/** 生成章节反思问题的输入。 */
+export interface ReflectionQuestionsInput {
+  chapterTitle: string;
+  chapterTheme: string;
+  terms: string[];
+  learner?: LearnerContext;
+}
+
+/** 章节反思总结的输入。 */
+export interface ReflectionSummaryInput {
+  chapterTitle: string;
+  chapterTheme: string;
+  questions: string[];
+  answers: string[];
+  learner: LearnerContext;
+}
+
+/** 章节反思总结输出：总结 + 更新后的画像（已融入岗位结合）。 */
+export interface ReflectionSummaryResult {
+  summary: string;
+  portrait: string;
+}
+
 // -------------------------------- 服务接口 ---------------------------------
 
 /**
@@ -154,6 +179,12 @@ export interface ScoringService {
 
   /** 每个关键词终评后：依据本次表现增量更新该员工的标签与画像。 */
   updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult>;
+
+  /** 章节学完后：生成 2-3 个「结合岗位」的反思问题。 */
+  reflectionQuestions(input: ReflectionQuestionsInput): Promise<string[]>;
+
+  /** 章节反思作答后：给出章节总结，并把岗位结合融入画像。 */
+  reflectionSummary(input: ReflectionSummaryInput): Promise<ReflectionSummaryResult>;
 }
 
 /** 空记忆标签（画像尚未建立时的初值）。 */

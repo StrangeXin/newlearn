@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MockScoringService } from "./mock";
-import { type LearnerContext, PASS_THRESHOLD } from "./types";
+import { EMPTY_TAGS, type LearnerContext, PASS_THRESHOLD } from "./types";
 
 const svc = new MockScoringService();
 
@@ -153,5 +153,35 @@ describe("MockScoringService · updateMemory", () => {
     const r = await svc.updateMemory({ ...base, finalScore: 90, learner: withPrev });
     expect(r.tags.strengths).toContain("Transformer");
     expect(r.tags.strengths).toContain(keyword.term);
+  });
+});
+
+describe("MockScoringService · 章节反思", () => {
+  it("反思问题结合岗位与章节（2-3个）", async () => {
+    const qs = await svc.reflectionQuestions({
+      chapterTitle: "深度学习",
+      chapterTheme: "神经网络",
+      terms: ["CNN", "RNN"],
+      learner,
+    });
+    expect(qs.length).toBeGreaterThanOrEqual(2);
+    expect(qs.length).toBeLessThanOrEqual(3);
+    expect(qs[0]).toContain("产品经理");
+    expect(qs[0]).toContain("深度学习");
+  });
+
+  it("反思总结确定性 + 画像追加反思小节且保留原画像", async () => {
+    const input = {
+      chapterTitle: "深度学习",
+      chapterTheme: "x",
+      questions: ["q1", "q2"],
+      answers: ["这是我的回答一", "这是我的回答二"],
+      learner: { ...learner, memory: { tags: EMPTY_TAGS, portrait: "# 我的画像" } },
+    };
+    const a = await svc.reflectionSummary(input);
+    const b = await svc.reflectionSummary(input);
+    expect(a).toEqual(b);
+    expect(a.portrait).toContain("## 《深度学习》章节反思");
+    expect(a.portrait).toContain("# 我的画像");
   });
 });

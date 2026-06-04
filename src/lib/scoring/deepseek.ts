@@ -11,6 +11,9 @@ import {
   LearnerContext,
   LearnerMemoryTags,
   PASS_THRESHOLD,
+  ReflectionQuestionsInput,
+  ReflectionSummaryInput,
+  ReflectionSummaryResult,
   ScoringService,
   SubmitNoteInput,
   SubmitNoteResult,
@@ -268,6 +271,45 @@ ${input.learner.memory?.portrait || "（暂无，本次新建）"}
       typeof obj.portrait === "string" ? obj.portrait : input.learner.memory?.portrait ?? "";
     return { tags, portrait };
   }
+
+  async reflectionQuestions(input: ReflectionQuestionsInput): Promise<string[]> {
+    const cfg = readConfig();
+    const userContent = `员工刚学完一个章节，请生成 2-3 个「结合该员工岗位与实际工作」的反思问题，帮助 ta 把本章知识落到工作中（而不是停留在概念）。
+章节：《${input.chapterTitle}》——${input.chapterTheme}
+本章关键词：${input.terms.join("、")}
+${formatLearner(input.learner)}
+问题要具体、贴合其岗位与应用场景，引导其思考「如何用」「能改进什么」。严格 JSON：{"questions": ["...", "..."]}。只返回 JSON。`;
+    const obj = await chat(cfg, userContent, REFLECTION_SYSTEM_PROMPT);
+    const qs = Array.isArray(obj.questions)
+      ? obj.questions.map((q) => String(q)).filter((q) => q.trim()).slice(0, 3)
+      : [];
+    return qs.length ? qs : [`结合你的岗位，谈谈《${input.chapterTitle}》最能用上的一点。`];
+  }
+
+  async reflectionSummary(input: ReflectionSummaryInput): Promise<ReflectionSummaryResult> {
+    const cfg = readConfig();
+    const qa = input.questions
+      .map((q, i) => `问${i + 1}：${q}\n答${i + 1}：${input.answers[i]?.trim() ? input.answers[i] : "（未作答）"}`)
+      .join("\n");
+    const userContent = `根据员工对《${input.chapterTitle}》章节反思的回答，产出：
+1) summary：一段面向该员工的中文章节总结（先肯定、再点出如何把本章用于其岗位、给一个可落地的小建议）。
+2) portrait：在【已有画像】基础上更新的 Markdown 画像，重点补充/丰富「## 与岗位结合」小节，保持其它小节结构稳定，便于逐行对比。
+${formatLearner(input.learner)}
+【反思问答】
+${qa}
+【已有画像】
+${input.learner.memory?.portrait || "（暂无）"}
+严格 JSON：{"summary":"...","portrait":"<markdown>"}。只返回 JSON。`;
+    const obj = await chat(cfg, userContent, REFLECTION_SYSTEM_PROMPT);
+    const summary = typeof obj.summary === "string" ? obj.summary : "已完成本章反思。";
+    const portrait =
+      typeof obj.portrait === "string" && obj.portrait.trim()
+        ? obj.portrait
+        : input.learner.memory?.portrait ?? "";
+    return { summary, portrait };
+  }
 }
+
+const REFLECTION_SYSTEM_PROMPT = `你是 AI 学习平台的学习教练，擅长把抽象知识与员工的真实岗位连接起来，帮助其学以致用。输出务必结合员工档案与岗位，具体、可落地，只输出严格 JSON。`;
 
 const MEMORY_SYSTEM_PROMPT = `你是 AI 学习平台的学情分析助手。你的任务是依据员工最新一次的学习表现，增量维护其「学习画像」——既要积累强项、兴趣，也要记录薄弱点与盲区，并思考如何把所学与其岗位结合。要求客观、具体、连续（在已有画像基础上演进），只输出严格 JSON。`;

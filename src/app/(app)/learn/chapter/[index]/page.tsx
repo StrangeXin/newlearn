@@ -51,6 +51,14 @@ export default async function ChapterPage({
   });
   const byKeyword = new Map(progresses.map((p) => [p.keywordId, p]));
   const completed = progresses.filter((p) => p.isCompleted).length;
+  const allDone = completed === chapter.keywords.length && chapter.keywords.length > 0;
+  const reflection = allDone
+    ? await prisma.chapterReflection.findUnique({
+        where: { userId_chapterId: { userId: user.id, chapterId: chapter.id } },
+        select: { summary: true },
+      })
+    : null;
+  const reflectionDone = !!reflection?.summary;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -79,6 +87,23 @@ export default async function ChapterPage({
           style={{ width: `${(completed / chapter.keywords.length) * 100}%` }}
         />
       </div>
+
+      {allDone && (
+        <Link
+          href={`/learn/chapter/${chapter.index}/reflect`}
+          className="mt-5 flex items-center justify-between rounded-2xl border border-brand-200 bg-gradient-to-r from-brand-50 to-accent-400/10 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-bold text-ink">🎉 已通关本章！来做章节反思</div>
+            <div className="text-xs text-muted">
+              结合你的岗位，把本章所学落到实际工作中
+            </div>
+          </div>
+          <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white">
+            {reflectionDone ? "查看反思" : "开始反思"}
+          </span>
+        </Link>
+      )}
 
       <ul className="mt-6 grid gap-3 sm:grid-cols-2">
         {chapter.keywords.map((kw, i) => {

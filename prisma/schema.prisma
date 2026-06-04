@@ -85,6 +85,8 @@ model User {
   memory              EmployeeMemory?
   /// 每次画像更新的历史快照（成长轨迹）
   memorySnapshots     EmployeeMemorySnapshot[]
+  /// 章节反思（每章学完后的总结+结合岗位追问）
+  chapterReflections  ChapterReflection[]
 
   // 审计：导入者 / 角色变更者（自引用）
   createdBy        User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -163,6 +165,7 @@ model Chapter {
   keywords        Keyword[]
   rankingResults  RankingResult[]
   keywordProgress KeywordProgress[]
+  reflections     ChapterReflection[]
 
   /// 同一学科内章节序号唯一（配合 service 校验 1..5 保证恰好 5 章）
   @@unique([subjectId, index])
@@ -514,4 +517,26 @@ model EmployeeMemorySnapshot {
   @@unique([userId, seq])
   @@index([userId, seq])
   @@map("employee_memory_snapshots")
+}
+
+/// 章节反思：某员工学完某章后的「总结 + 结合岗位追问」一次性记录。1 章 1 条。
+model ChapterReflection {
+  id        String   @id @default(cuid())
+  userId    String
+  chapterId String
+  /// 结合岗位的反思问题（string[]）
+  questions Json
+  /// 员工回答（string[]，与 questions 对齐）
+  answers   Json
+  /// AI 给出的章节总结
+  summary   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([userId])
+  @@map("chapter_reflections")
 }
