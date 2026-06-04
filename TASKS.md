@@ -91,14 +91,18 @@
 
 ---
 
-## S4 · DeepSeek 真实接入
+## S4 · DeepSeek 真实接入 ✅
 **目标**：把 Mock 替换为真 AI，业务代码不变。
-- [ ] `DeepSeekScoringService` 实现（按 §6.1 rubric，开发时固化 Prompt 与维度权重）
-- [ ] `SCORING_PROVIDER` 环境变量切换
-- [ ] 同步等待 + 游戏化加载动画
-- [ ] API 失败友好提示 + 重试（不扣次数、不丢草稿）
-**验收**：配置真 key 后，提交笔记得到真实 DeepSeek 打分与追问；切回 mock 正常。
+- [x] `DeepSeekScoringService`（按 §6.1 rubric；submitNote/finalize/updateMemory，注入学习者档案）
+- [x] `SCORING_PROVIDER` 切换（生产 deepseek / 测试与种子 mock）；默认模型 `deepseek-v4-flash`
+- [x] 同步等待 + 加载动画（写笔记/答追问按钮态）；终评后画像更新失败不影响评分（try/catch）
+- [x] API 失败友好提示 + 重试（action 返回错误态，不丢草稿）
+**验收**：✅ 真 key 实测——submitNote(初分75+3高质量追问)、finalize(70/通过/中文反馈)、
+updateMemory(结构化标签+markdown画像，兴趣项自动贴合岗位)；JSON/response_format 正常；每调用 4–6s。
+单测 16/16；typecheck + build 通过。
 **依赖**：S3。
+
+> key 放 `.env`（已 gitignore，不入库）。模型可切 `deepseek-v4-pro` 提质。
 
 ---
 

@@ -179,15 +179,19 @@ export async function completeAttempt(
     }
   }
 
-  // 更新画像与成长轨迹（每次终评都更新）
-  await applyMemoryUpdate(userId, {
-    keyword: scKeyword,
-    keywordId: keyword.id,
-    note: submission.noteText,
-    followups: followups.map((f) => f.question),
-    answers: answerList,
-    finalScore: fin.finalScore,
-  });
+  // 更新画像与成长轨迹（每次终评都更新）；失败不影响本次评分结果
+  try {
+    await applyMemoryUpdate(userId, {
+      keyword: scKeyword,
+      keywordId: keyword.id,
+      note: submission.noteText,
+      followups: followups.map((f) => f.question),
+      answers: answerList,
+      finalScore: fin.finalScore,
+    });
+  } catch (err) {
+    console.error("画像更新失败（不影响本次评分）：", err);
+  }
 
   return {
     finalScore: fin.finalScore,
