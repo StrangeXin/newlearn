@@ -165,3 +165,70 @@ export async function updateKeywordAction(
   revalidatePath("/admin/content");
   return { ok: true };
 }
+
+/** 新建空学科。 */
+export async function createSubjectAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "请填写学科名称" };
+  const exists = await prisma.subject.findUnique({ where: { title } });
+  if (exists) return { error: "学科名称已存在" };
+  await prisma.subject.create({ data: { title } });
+  revalidatePath("/admin/content");
+  return { ok: true };
+}
+
+/** 给空学科批量导入内容（JSON：{chapters:[{index,title,theme,keywords:[{term,description?,referencePoints?}]}]}）。 */
+export async function importSubjectContentAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const subjectId = String(formData.get("subjectId") ?? "");
+  const jsonText = String(formData.get("json") ?? "");
+  if (!subjectId) return { error: "缺少学科" };
+
+  let data: unknown;
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    return { error: "JSON 解析失败，请检查格式" };
+  }
+  const chapters = (data as { chapters?: unknown })?.chapters;
+  if (!Array.isArray(chapters) || chapters.length === 0) {
+    return { error: "JSON 需包含非空的 chapters 数组" };
+  }
+  for (const ch of chapters as Record<string, unknown>[]) {
+    if (typeof ch.index !== "number" || !ch.title || !Array.isArray(ch.keywords)) {
+      return { error: "章节结构不完整（需 index 数字、title、keywords 数组）" };
+    }
+  }
+  const existing = await prisma.chapter.count({ where: { subjectId } });
+  if (existing > 0) return { error: "该学科已有章节；请新建一个空学科再导入" };
+
+  for (const ch of chapters as Record<string, unknown>[]) {
+    const chapter = await prisma.chapter.create({
+      data: {
+        subjectId,
+        index: ch.index as number,
+        title: String(ch.title),
+        theme: String(ch.theme ?? ""),
+      },
+    });
+    const kws = (ch.keywords as Record<string, unknown>[]).filter((k) => k?.term);
+    await prisma.keyword.createMany({
+      data: kws.map((k, i) => ({
+        chapterId: chapter.id,
+        term: String(k.term),
+        description: k.description ? String(k.description) : null,
+        referencePoints: k.referencePoints ? String(k.referencePoints) : null,
+        orderIndex: i,
+      })),
+    });
+  }
+  revalidatePath("/admin/content");
+  return { ok: true };
+}

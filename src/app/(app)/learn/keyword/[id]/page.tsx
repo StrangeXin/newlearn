@@ -7,6 +7,7 @@ import { isChapterUnlocked } from "@/lib/schedule";
 import { getKeywordStat, getPeerNotes } from "@/lib/social";
 import { NoteForm } from "./note-form";
 import { FollowupsForm } from "./followups-form";
+import { ScoreReveal } from "./score-reveal";
 
 export default async function KeywordPage({
   params,
@@ -110,13 +111,7 @@ export default async function KeywordPage({
         {step === "result" && latest?.scoring && (
           <div className="text-center">
             <div className="text-sm text-muted">最终得分</div>
-            <div
-              className={`text-5xl font-extrabold ${
-                latest.isPassed ? "text-success-500" : "text-accent-500"
-              }`}
-            >
-              {latest.finalScore}
-            </div>
+            <ScoreReveal value={latest.finalScore ?? 0} passed={latest.isPassed} />
             <p className="mt-2 font-semibold text-ink">
               {latest.isPassed
                 ? progress?.bestFinalScore === latest.finalScore

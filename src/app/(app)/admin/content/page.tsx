@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
-import { KeywordEditor, SetActiveButton, StartDateForm } from "./content-forms";
+import {
+  CreateSubjectForm,
+  ImportContentForm,
+  KeywordEditor,
+  SetActiveButton,
+  StartDateForm,
+} from "./content-forms";
 
 function toDateInput(d: Date | null): string {
   if (!d) return "";
@@ -46,14 +52,27 @@ export default async function AdminContentPage() {
 
       <section className="mt-5">
         <h2 className="mb-2 font-bold text-ink">学科</h2>
+        <div className="mb-3 rounded-2xl border border-brand-100 bg-white/90 p-4">
+          <CreateSubjectForm />
+          <p className="mt-2 text-xs text-muted">
+            新建空学科后，可在下方用 JSON 批量导入「5 章 + 100 词」内容（结构同 prisma/seed-data）。
+          </p>
+        </div>
         <ul className="divide-y divide-brand-100 rounded-2xl border border-brand-100 bg-white/90">
           {subjects.map((s) => (
-            <li key={s.id} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <span className="font-medium text-ink">{s.title}</span>
-                <span className="ml-2 text-xs text-muted">{s._count.chapters} 章</span>
+            <li key={s.id} className="px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-ink">{s.title}</span>
+                  <span className="ml-2 text-xs text-muted">{s._count.chapters} 章</span>
+                </div>
+                <SetActiveButton subjectId={s.id} active={s.id === activeId} />
               </div>
-              <SetActiveButton subjectId={s.id} active={s.id === activeId} />
+              {s._count.chapters === 0 && (
+                <div className="mt-2">
+                  <ImportContentForm subjectId={s.id} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
