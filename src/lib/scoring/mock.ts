@@ -211,6 +211,10 @@ export class MockScoringService implements ScoringService {
     };
     const term = input.keyword.term;
 
+    // 重提改分时先从三个「分数桶」移除，保证一个词只落在一个桶（重提通过会从盲区升到强项）
+    removeFrom(tags.strengths, term);
+    removeFrom(tags.weaknesses, term);
+    removeFrom(tags.blindSpots, term);
     // 按最终分确定性分桶
     if (input.finalScore >= 80) pushUnique(tags.strengths, term);
     else if (input.finalScore < PASS_THRESHOLD) pushUnique(tags.blindSpots, term);
@@ -265,6 +269,12 @@ function buildPortrait(
 /** 去重追加（确定性）。 */
 function pushUnique(list: string[], item: string): void {
   if (!list.includes(item)) list.push(item);
+}
+
+/** 从列表移除某项（确定性）。 */
+function removeFrom(list: string[], item: string): void {
+  const i = list.indexOf(item);
+  if (i !== -1) list.splice(i, 1);
 }
 
 /** 限制列表长度，保留最近的若干项（确定性）。 */

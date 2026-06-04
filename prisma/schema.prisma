@@ -242,6 +242,8 @@ model Scoring {
   /// 综合「原笔记+追问回答」后的最终分 1-100；终评前为 null。
   /// 通过与否（>=60）为本字段的纯派生量，不再独立持久化 isPassed，避免脏数据/失同步。
   finalScore   Int?
+  /// 终评的中文反馈（面向学习者）；终评前为 null。
+  feedback     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
