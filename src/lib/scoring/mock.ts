@@ -108,20 +108,15 @@ function followupCountFor(initialScore: number): 1 | 2 | 3 {
 
 /**
  * 确定性地生成追问文案。问题池按「应优先补强的薄弱点」排序，取前 N 个。
- * 若提供岗位，则把最后一问替换为「结合岗位」的应用题，演示个性化（仍确定性）。
+ * 单个关键词的追问只考查对该词本身的理解；「结合岗位」类问题放到章节总结环节。
  */
-function buildFollowups(term: string, count: 1 | 2 | 3, position?: string): string[] {
+function buildFollowups(term: string, count: 1 | 2 | 3): string[] {
   const pool = [
     `请进一步说明「${term}」的核心原理或运作机制，而不仅是定义。`,
     `能否举一个「${term}」的具体应用场景或实例，并解释它为什么适用？`,
     `「${term}」有哪些局限、风险或常见误区？请结合你的理解谈谈。`,
   ];
-  const list = pool.slice(0, count);
-  if (position && position.trim()) {
-    list[list.length - 1] =
-      `结合你作为「${position}」的日常工作，「${term}」可以怎么用上、能解决什么问题？`;
-  }
-  return list;
+  return pool.slice(0, count);
 }
 
 /**
@@ -179,11 +174,7 @@ export class MockScoringService implements ScoringService {
     const count = followupCountFor(initialScore);
     return {
       initialScore,
-      followups: buildFollowups(
-        input.keyword.term,
-        count,
-        input.learner?.profile?.position,
-      ),
+      followups: buildFollowups(input.keyword.term, count),
     };
   }
 
@@ -232,16 +223,43 @@ export class MockScoringService implements ScoringService {
     capList(tags.interests);
     capList(tags.blindSpots);
 
-    const position = input.learner.profile?.position ?? "员工";
-    const band =
-      input.finalScore >= 85 ? "优秀" : input.finalScore >= PASS_THRESHOLD ? "合格" : "待提升";
-    const toImprove = tags.weaknesses.length + tags.blindSpots.length;
-    const portrait =
-      `${position}画像：累计强项 ${tags.strengths.length} 项、待加强 ${toImprove} 项。` +
-      `最近完成「${term}」，最终 ${input.finalScore} 分（${band}）。`;
-
+    const portrait = buildPortrait(input.learner.profile, tags, term, input.finalScore);
     return { tags, portrait };
   }
+}
+
+/** 把标签与最近进展渲染成固定结构的 Markdown 画像（确定性，便于按行 git-diff）。 */
+function buildPortrait(
+  profile: { position?: string; applicationAreas?: string } | undefined,
+  tags: LearnerMemoryTags,
+  term: string,
+  finalScore: number,
+): string {
+  const band = finalScore >= 85 ? "优秀" : finalScore >= PASS_THRESHOLD ? "合格" : "待提升";
+  const bullets = (arr: string[]): string =>
+    arr.length ? arr.map((t) => `- ${t}`).join("\n") : "- （暂无）";
+  const apply = profile?.applicationAreas?.trim();
+  return [
+    `# ${profile?.position ?? "员工"} · 学习画像`,
+    "",
+    "## 掌握强项",
+    bullets(tags.strengths),
+    "",
+    "## 待加强",
+    bullets(tags.weaknesses),
+    "",
+    "## 知识盲区",
+    bullets(tags.blindSpots),
+    "",
+    "## 兴趣方向",
+    bullets(tags.interests),
+    "",
+    "## 与岗位结合",
+    apply ? `- 可尝试把所学用于：${apply}` : "- （待章节总结时结合岗位深入）",
+    "",
+    "## 最近进展",
+    `- 完成「${term}」，得分 ${finalScore}（${band}）`,
+  ].join("\n");
 }
 
 /** 去重追加（确定性）。 */

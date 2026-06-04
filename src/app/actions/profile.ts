@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -51,4 +52,35 @@ export async function saveProfileAction(
   });
 
   redirect("/learn");
+}
+
+export interface EditProfileState {
+  error?: string;
+  ok?: boolean;
+}
+
+/** 员工在「我的资料」页编辑基本资料（资料可改，画像只读）。 */
+export async function editProfileAction(
+  _prev: EditProfileState,
+  formData: FormData,
+): Promise<EditProfileState> {
+  const user = await requireUser();
+  const data = {
+    position: String(formData.get("position") ?? "").trim(),
+    department: String(formData.get("department") ?? "").trim(),
+    level: String(formData.get("level") ?? "").trim(),
+    background: String(formData.get("background") ?? "").trim(),
+    aiFamiliarity: String(formData.get("aiFamiliarity") ?? "").trim(),
+    applicationAreas: String(formData.get("applicationAreas") ?? "").trim(),
+  };
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  await prisma.employeeProfile.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, ...parsed.data },
+    update: parsed.data,
+  });
+  revalidatePath("/profile");
+  return { ok: true };
 }

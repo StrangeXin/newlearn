@@ -109,16 +109,9 @@ const learner: LearnerContext = {
   },
 };
 
-describe("MockScoringService · 个性化追问", () => {
-  it("传入岗位时，最后一个追问结合该岗位", async () => {
+describe("MockScoringService · 单词追问不强行联系岗位", () => {
+  it("即便传入岗位，单词追问也只考查关键词本身（岗位结合留给章节总结）", async () => {
     const r = await svc.submitNote({ note: weakNote, keyword, learner });
-    const last = r.followups[r.followups.length - 1];
-    expect(last).toContain("产品经理");
-    expect(last).toContain(keyword.term);
-  });
-
-  it("不传学习者时，追问不含岗位字样（保持通用）", async () => {
-    const r = await svc.submitNote({ note: weakNote, keyword });
     expect(r.followups.some((f) => f.includes("产品经理"))).toBe(false);
   });
 });
@@ -133,6 +126,14 @@ describe("MockScoringService · updateMemory", () => {
     const lo = await svc.updateMemory({ ...base, finalScore: 40, learner });
     expect(lo.tags.blindSpots).toContain(keyword.term);
     expect(lo.portrait).toContain("产品经理");
+  });
+
+  it("画像是固定结构的 Markdown（便于 git-diff）", async () => {
+    const r = await svc.updateMemory({ ...base, finalScore: 90, learner });
+    expect(r.portrait).toContain("# 产品经理 · 学习画像");
+    for (const h of ["## 掌握强项", "## 待加强", "## 知识盲区", "## 兴趣方向", "## 最近进展"]) {
+      expect(r.portrait).toContain(h);
+    }
   });
 
   it("完全确定性：相同输入得到相同画像", async () => {

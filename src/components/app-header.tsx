@@ -14,16 +14,30 @@ export function AppHeader({ user }: { user: User }) {
           智学闯关
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className="hidden text-sm text-muted sm:inline">
-            {user.name}
-          </span>
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          {!isAdmin && (
+            <>
+              <Link
+                href="/growth"
+                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
+              >
+                成长
+              </Link>
+              <Link
+                href="/profile"
+                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
+              >
+                我的
+              </Link>
+            </>
+          )}
+          <span className="hidden text-sm text-muted sm:inline">{user.name}</span>
           <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700">
             {roleLabel(user.role)}
           </span>
           <Link
             href="/change-password"
-            className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
+            className="hidden rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-block"
           >
             修改密码
           </Link>

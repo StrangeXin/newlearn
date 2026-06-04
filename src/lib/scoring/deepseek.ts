@@ -152,7 +152,7 @@ function formatLearner(learner?: LearnerContext): string {
     if (m.portrait?.trim()) lines.push(`- 画像摘要：${m.portrait}`);
   }
   if (lines.length === 0) return "";
-  return `\n【学习者档案（用于让追问更贴合其岗位与水平；不要把这些信息当作笔记内容来打分）】\n${lines.join("\n")}\n`;
+  return `\n【学习者档案（仅供参考，勿当作笔记内容打分）】\n${lines.join("\n")}\n`;
 }
 
 export class DeepSeekScoringService implements ScoringService {
@@ -169,7 +169,7 @@ ${formatLearner(input.learner)}
 【学习者笔记】
 ${note}
 
-请按 rubric 评估并据笔记薄弱点生成 1~3 个追问；若有学习者档案，让追问尽量贴合其岗位、背景与画像，引导其把该关键词与实际工作联系起来。输出严格 JSON：{"initialScore": 整数(1-100), "followups": [1~3 条中文追问]}（笔记越完整追问越少）。只返回 JSON。`;
+请按 rubric 评估并据笔记薄弱点生成 1~3 个追问（笔记越完整追问越少）。输出严格 JSON：{"initialScore": 整数(1-100), "followups": [1~3 条中文追问]}。只返回 JSON。`;
 
     const obj = await chat(cfg, userContent);
     const initialScore = clampScore(Number(obj.initialScore));
@@ -241,8 +241,18 @@ ${qa}
 【已有标签（在此基础上增量调整，不要凭空抹掉历史）】
 ${JSON.stringify(prev)}
 
-请输出更新后的标签与一段不超过 200 字的中文画像摘要（这个员工是谁、当前掌握程度、薄弱处、如何把所学结合到其岗位）。严格 JSON：
-{"tags":{"strengths":[],"weaknesses":[],"interests":[],"blindSpots":[]},"portrait":"..."}。只返回 JSON。`;
+【已有画像（在其基础上增量演进，保持结构稳定，便于按行对比变化）】
+${input.learner.memory?.portrait || "（暂无，本次新建）"}
+
+请输出更新后的标签，以及一份 Markdown 画像。画像必须**固定使用以下小节标题与顺序**（内容用「- 」无序列表，空则写「- （暂无）」），以便逐行 diff：
+# {岗位} · 学习画像
+## 掌握强项
+## 待加强
+## 知识盲区
+## 兴趣方向
+## 与岗位结合
+## 最近进展
+严格 JSON：{"tags":{"strengths":[],"weaknesses":[],"interests":[],"blindSpots":[]},"portrait":"<markdown 字符串>"}。只返回 JSON。`;
 
     const obj = await chat(cfg, userContent, MEMORY_SYSTEM_PROMPT);
     const rawTags = (obj.tags ?? {}) as Record<string, unknown>;

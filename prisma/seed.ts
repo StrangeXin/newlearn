@@ -12,6 +12,12 @@ import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
+import type { Prisma } from "../src/generated/prisma/client";
+import { MockScoringService } from "../src/lib/scoring/mock";
+import { computeMemoryDiff } from "../src/lib/memory-diff";
+import type { LearnerMemoryTags, LearnerProfile } from "../src/lib/scoring/types";
+
+const json = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -58,6 +64,96 @@ function loadChapters(subjectDir: string): { chapters: SeedChapter[] } {
   return { chapters };
 }
 
+// ---- 模拟学习：用 Mock 评分器真实跑若干关键词，产出画像与成长轨迹快照 ----
+const scorer = new MockScoringService();
+const EMPTY: LearnerMemoryTags = { strengths: [], weaknesses: [], interests: [], blindSpots: [] };
+
+function splitRefs(s: string | null): string[] {
+  return s ? s.split(/[;；]/).map((x) => x.trim()).filter(Boolean) : [];
+}
+/** 按「质量等级 level(0~1)」确定性地造一份笔记：覆盖度与篇幅随 level 增长。 */
+function buildNote(term: string, refs: string[], level: number): string {
+  const covered = refs.slice(0, Math.ceil(refs.length * level));
+  const body = `${term}是一个重要概念。` + covered.map((r) => `关于${r}，我有具体理解。`).join("");
+  const filler = "这里补充更多原理细节、机制说明与实际例子。".repeat(Math.round(level * 40));
+  return body + filler;
+}
+function buildAnswer(level: number): string {
+  return "我的回答结合了原理与具体例子来展开说明。".repeat(Math.max(1, Math.round(level * 6)));
+}
+
+async function simulateLearning(
+  subjectId: string,
+  loginName: string,
+  profile: LearnerProfile,
+  levels: number[],
+): Promise<void> {
+  const u = await prisma.user.findUnique({ where: { loginName: loginName.toLowerCase() } });
+  if (!u) return;
+  await prisma.employeeProfile.upsert({
+    where: { userId: u.id },
+    create: { userId: u.id, ...profile },
+    update: profile,
+  });
+
+  const ch1 = await prisma.chapter.findFirst({ where: { subjectId, index: 1 } });
+  if (!ch1) return;
+  const kws = await prisma.keyword.findMany({
+    where: { chapterId: ch1.id },
+    orderBy: { orderIndex: "asc" },
+    take: levels.length,
+  });
+
+  let tags: LearnerMemoryTags = EMPTY;
+  let portrait = "";
+  let seq = 0;
+  for (let i = 0; i < kws.length; i += 1) {
+    const kw = kws[i];
+    const level = levels[i];
+    const scKw = {
+      term: kw.term,
+      description: kw.description ?? undefined,
+      referencePoints: splitRefs(kw.referencePoints),
+    };
+    const note = buildNote(kw.term, scKw.referencePoints, level);
+    const { followups } = await scorer.submitNote({ note, keyword: scKw, learner: { profile } });
+    const answers = followups.map(() => buildAnswer(level));
+    const fin = await scorer.finalize({ note, keyword: scKw, followups, answers, learner: { profile } });
+    const prevTags = tags;
+    const prevPortrait = portrait;
+    const upd = await scorer.updateMemory({
+      keyword: scKw,
+      note,
+      followups,
+      answers,
+      finalScore: fin.finalScore,
+      learner: { profile, memory: { tags, portrait } },
+    });
+    seq += 1;
+    const diff = computeMemoryDiff(prevTags, upd.tags, prevPortrait, upd.portrait);
+    tags = upd.tags;
+    portrait = upd.portrait;
+    await prisma.employeeMemory.upsert({
+      where: { userId: u.id },
+      create: { userId: u.id, tags: json(tags), portrait, updateCount: seq },
+      update: { tags: json(tags), portrait, updateCount: seq },
+    });
+    await prisma.employeeMemorySnapshot.create({
+      data: {
+        userId: u.id,
+        keywordId: kw.id,
+        keywordTerm: kw.term,
+        finalScore: fin.finalScore,
+        tags: json(tags),
+        portrait,
+        diff: json(diff),
+        seq,
+      },
+    });
+  }
+  console.log(`   🧬 模拟「${loginName}」完成 ${kws.length} 个关键词，画像更新 ${seq} 次`);
+}
+
 const DEMO_USERS: { name: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] =
   [
     { name: "超级管理员", role: "SUPERADMIN" },
@@ -74,6 +170,9 @@ const DEMO_USERS: { name: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] 
 
 async function clearAll() {
   // 外键安全顺序：先子后父
+  await prisma.employeeMemorySnapshot.deleteMany();
+  await prisma.employeeMemory.deleteMany();
+  await prisma.employeeProfile.deleteMany();
   await prisma.pointsLedger.deleteMany();
   await prisma.rankingResult.deleteMany();
   await prisma.followup.deleteMany();
@@ -147,6 +246,22 @@ async function main() {
   await prisma.activeSubjectConfig.create({
     data: { singletonId: "GLOBAL", activeSubjectId: subject.id },
   });
+
+  // ---- 模拟一名员工的学习轨迹（让成长轨迹页开箱即看；其余员工保留空白以演示 onboarding）----
+  console.log("🧬 模拟员工学习轨迹…");
+  await simulateLearning(
+    subject.id,
+    "李四",
+    {
+      position: "数据分析师",
+      department: "数据部",
+      level: "P5 / 3 年",
+      background: "统计学专业，熟悉 Python 与 SQL",
+      aiFamiliarity: "了解（知道一些概念）",
+      applicationAreas: "用户行为分析、自动化报表、异常检测",
+    },
+    [0.3, 0.55, 0.85, 0.65, 0.95, 1.0],
+  );
 
   console.log(
     `✅ 完成：${DEMO_USERS.length} 个账号、学科「${subject.title}」共 ${data.chapters.length} 章 / ${total} 关键词，已激活为当前学科。`,

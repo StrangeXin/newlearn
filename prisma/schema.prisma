@@ -83,6 +83,8 @@ model User {
   profile             EmployeeProfile?
   /// 系统维护、随学习不断更新的画像与标签（1:1）
   memory              EmployeeMemory?
+  /// 每次画像更新的历史快照（成长轨迹）
+  memorySnapshots     EmployeeMemorySnapshot[]
 
   // 审计：导入者 / 角色变更者（自引用）
   createdBy        User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -187,6 +189,7 @@ model Keyword {
   // 反向关系
   submissions     Submission[]
   keywordProgress KeywordProgress[]
+  memorySnapshots EmployeeMemorySnapshot[]
 
   /// 同一章内关键词不重复
   @@unique([chapterId, term])
@@ -481,4 +484,32 @@ model EmployeeMemory {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("employee_memories")
+}
+
+/// 画像更新的历史快照：每个关键词终评后追加一条，便于展示成长轨迹与「这次变了什么」。
+model EmployeeMemorySnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  /// 触发本次更新的关键词（可空，便于以后章节总结等其它来源）
+  keywordId   String?
+  /// 关键词名（冗余，便于轨迹卡片直接展示）
+  keywordTerm String
+  /// 本次该关键词的最终分
+  finalScore  Int
+  /// 该时刻的完整标签快照
+  tags        Json
+  /// 该时刻的画像摘要
+  portrait    String
+  /// 相对上一快照的变化：{ addedStrengths[], addedWeaknesses[], addedInterests[], addedBlindSpots[], portraitChanged, prevPortrait, newPortrait }
+  diff        Json
+  /// 第几次更新（1 开始，与 EmployeeMemory.updateCount 对应）
+  seq         Int
+  createdAt   DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword Keyword? @relation(fields: [keywordId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, seq])
+  @@index([userId, seq])
+  @@map("employee_memory_snapshots")
 }
