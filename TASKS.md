@@ -32,15 +32,19 @@
 
 ---
 
-## S2 · 登录与激活（竖切片）
+## S2 · 登录与激活（竖切片） ✅
 **目标**：从登录到落地仪表盘的完整身份闭环。
-- [ ] 登录页（姓名 + 密码），白名单校验，名单外姓名拒绝
-- [ ] 首登强制改密流程（`mustChangePassword`）
-- [ ] 基于 `role` 的路由：员工 → 学习首页，管理员/超管 → 管理后台
-- [ ] 会话管理（登录态、登出）
-- [ ] 「我的」改密入口
-**验收**：样例员工用默认密码首登 → 强制改密 → 进员工首页；管理员进后台。
+- [x] 登录页（姓名 + 密码），白名单校验（loginName 归一），名单外姓名拒绝
+- [x] 首登强制改密流程（`mustChangePassword`，登录即激活 isActivated）
+- [x] 基于 `role` 的路由：员工 → `/learn`，管理员/超管 → `/admin`（含越权弹回）
+- [x] 会话管理：jose 签发 httpOnly JWT cookie，受保护路由守卫，登出
+- [x] 顶栏「修改密码」入口（首登免输当前密码，日常改密需校验）
+**验收**：✅ 端到端验证（INTG_PASS）：首登→强制改密；改密后进员工首页见姓名+章节；
+员工越权 /admin 弹回 /learn；超管进后台。登录核心逻辑真库 smoke 通过；build 通过。
 **依赖**：S1。
+
+> 实现：`src/lib/auth/*`（password/session/user）、`src/app/actions/auth.ts`、
+> `(auth)/login`、`(auth)/change-password`、`(app)/{layout,learn,admin}`、`components/app-header`。
 
 ---
 
