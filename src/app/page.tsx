@@ -8,11 +8,11 @@ const steps = [
 ];
 
 const chapters = [
-  "起源与基础",
+  "起源与数学",
   "经典机器学习",
   "深度学习",
   "大模型时代",
-  "前沿趋势",
+  "前沿与治理",
 ];
 
 export default function Home() {

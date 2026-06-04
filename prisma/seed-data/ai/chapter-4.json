@@ -1,7 +1,7 @@
 {
   "index": 4,
-  "title": "大模型与Transformer时代",
-  "theme": "从注意力机制到大语言模型的预训练、对齐与前沿架构，把握规模扩展与推理能力的演进。",
+  "title": "大模型与 Transformer 时代",
+  "theme": "一个叫「注意力」的机制如何点燃大模型浪潮：预训练、对齐、推理，以及 MoE、长上下文这些最新打法。",
   "keywords": [
     {
       "term": "注意力机制(Attention)",
