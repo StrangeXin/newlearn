@@ -185,6 +185,47 @@ async function simulateLearning(
   );
 }
 
+/** 直接给某员工补「完成某章全部关键词」的进度+基础分（用于排名演示），均分=avg，本周内完成。 */
+async function seedChapterCompletion(
+  subjectId: string,
+  startDate: Date,
+  loginName: string,
+  profile: LearnerProfile,
+  chapterIndex: number,
+  avg: number,
+): Promise<void> {
+  const u = await prisma.user.findUnique({ where: { loginName: loginName.toLowerCase() } });
+  if (!u) return;
+  await prisma.employeeProfile.upsert({
+    where: { userId: u.id },
+    create: { userId: u.id, ...profile },
+    update: profile,
+  });
+  const ch = await prisma.chapter.findFirst({
+    where: { subjectId, index: chapterIndex },
+    include: { keywords: true },
+  });
+  if (!ch) return;
+  const completedAt = new Date(startDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 第1周内
+  for (const kw of ch.keywords) {
+    const prog = await prisma.keywordProgress.create({
+      data: {
+        userId: u.id,
+        keywordId: kw.id,
+        chapterId: ch.id,
+        subjectId,
+        bestFinalScore: avg,
+        isCompleted: true,
+        completedAt,
+      },
+    });
+    await prisma.pointsLedger.create({
+      data: { userId: u.id, subjectId, type: "BASE", amount: 1, keywordProgressId: prog.id },
+    });
+  }
+  console.log(`   🏁 「${loginName}」完成第${chapterIndex}章全部（均分 ${avg}）`);
+}
+
 const DEMO_USERS: { name: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] =
   [
     { name: "超级管理员", role: "SUPERADMIN" },
@@ -294,6 +335,13 @@ async function main() {
     },
     [0.3, 0.55, 0.85, 0.65, 0.95, 1.0],
   );
+
+  // 排名演示：4 名员工完成第 1 章全部（不同均分，含并列 75 演示「并列均给」）
+  const startDate = subject.startDate!;
+  await seedChapterCompletion(subject.id, startDate, "赵六", { position: "算法工程师", department: "AI实验室", level: "P7/8年", background: "机器学习博士", aiFamiliarity: "精通（能落地应用）", applicationAreas: "模型研发、效果优化" }, 1, 88);
+  await seedChapterCompletion(subject.id, startDate, "钱七", { position: "前端工程师", department: "产品研发", level: "P6/5年", background: "计算机科学", aiFamiliarity: "熟练（用过一些工具）", applicationAreas: "AI 辅助编码、组件生成" }, 1, 82);
+  await seedChapterCompletion(subject.id, startDate, "孙八", { position: "测试工程师", department: "质量部", level: "P5/4年", background: "软件工程", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "用例生成、缺陷分析" }, 1, 75);
+  await seedChapterCompletion(subject.id, startDate, "周九", { position: "运维工程师", department: "基础设施", level: "P6/6年", background: "网络与系统", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "日志分析、告警归因" }, 1, 75);
 
   // 给李四种一个待审兑换，演示审批流
   const liSi = await prisma.user.findUnique({ where: { loginName: "李四" } });

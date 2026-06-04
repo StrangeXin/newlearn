@@ -81,6 +81,16 @@ export default async function AdminPage() {
             <span className="text-sm text-muted">无待审</span>
           )}
         </Link>
+        <Link
+          href="/admin/rankings"
+          className="flex items-center justify-between rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-bold text-ink">章节排名结算</div>
+            <div className="text-xs text-muted">结算每章 top3 奖励</div>
+          </div>
+          <span className="text-xl">🏆</span>
+        </Link>
       </div>
 
       <p className="mt-8 text-center text-xs text-muted">
