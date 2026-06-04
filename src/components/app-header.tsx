@@ -18,6 +18,12 @@ export function AppHeader({ user }: { user: User }) {
           {!isAdmin && (
             <>
               <Link
+                href="/leaderboard"
+                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
+              >
+                排行榜
+              </Link>
+              <Link
                 href="/redeem"
                 className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
               >

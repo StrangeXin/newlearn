@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { PASS_THRESHOLD } from "@/lib/scoring";
 import { isChapterUnlocked } from "@/lib/schedule";
+import { getPeerNotes } from "@/lib/social";
 import { NoteForm } from "./note-form";
 import { FollowupsForm } from "./followups-form";
 
@@ -51,6 +52,7 @@ export default async function KeywordPage({
         : "note";
 
   const backHref = `/learn/chapter/${keyword.chapter.index}`;
+  const peerNotes = progress?.isCompleted ? await getPeerNotes(user.id, id) : null;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -148,6 +150,28 @@ export default async function KeywordPage({
           </div>
         )}
       </div>
+
+      {peerNotes && peerNotes.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-1 font-bold text-ink">👀 看看别人怎么写的</h2>
+          <p className="mb-3 text-xs text-muted">
+            你已通过本词，解锁同伴笔记（按分数从高到低），相互学习。
+          </p>
+          <ul className="space-y-2">
+            {peerNotes.map((p, i) => (
+              <li key={i} className="rounded-xl border border-brand-100 bg-white/80 p-4 shadow-sm">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink">{p.name}</span>
+                  <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700">
+                    {p.score} 分
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-muted">{p.note}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

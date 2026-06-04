@@ -208,6 +208,16 @@ async function seedChapterCompletion(
   if (!ch) return;
   const completedAt = new Date(startDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 第1周内
   for (const kw of ch.keywords) {
+    const sub = await prisma.submission.create({
+      data: {
+        userId: u.id,
+        keywordId: kw.id,
+        noteText: `从「${profile.position}」的视角看，「${kw.term}」的核心在于其原理、典型应用与边界。我结合实际工作梳理了它的关键要点与一个落地场景，整体约 ${avg} 分水平的学习笔记示例。`,
+        status: "COMPLETED",
+        finalScore: avg,
+        isPassed: true,
+      },
+    });
     const prog = await prisma.keywordProgress.create({
       data: {
         userId: u.id,
@@ -215,6 +225,7 @@ async function seedChapterCompletion(
         chapterId: ch.id,
         subjectId,
         bestFinalScore: avg,
+        bestSubmissionId: sub.id,
         isCompleted: true,
         completedAt,
       },
