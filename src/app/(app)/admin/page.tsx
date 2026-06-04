@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
 
@@ -14,12 +15,13 @@ function StatCard({ label, value, hint }: { label: string; value: string | numbe
 export default async function AdminPage() {
   const admin = await requireAdmin();
 
-  const [employeeCount, adminCount, keywordCount, activatedCount, cfg] =
+  const [employeeCount, adminCount, keywordCount, activatedCount, pendingRedeems, cfg] =
     await Promise.all([
       prisma.user.count({ where: { role: "EMPLOYEE" } }),
       prisma.user.count({ where: { role: { in: ["ADMIN", "SUPERADMIN"] } } }),
       prisma.keyword.count(),
       prisma.user.count({ where: { isActivated: true } }),
+      prisma.redemption.count({ where: { status: "PENDING" } }),
       prisma.activeSubjectConfig.findUnique({
         where: { singletonId: "GLOBAL" },
         include: { activeSubject: true },
@@ -45,8 +47,27 @@ export default async function AdminPage() {
         <StatCard label="关键词总数" value={keywordCount} />
       </div>
 
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/admin/redemptions"
+          className="flex items-center justify-between rounded-2xl border border-brand-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-bold text-ink">兑换审批</div>
+            <div className="text-xs text-muted">审批员工的积分兑换申请</div>
+          </div>
+          {pendingRedeems > 0 ? (
+            <span className="rounded-full bg-accent-500/15 px-3 py-1 text-sm font-bold text-accent-500">
+              {pendingRedeems} 待审
+            </span>
+          ) : (
+            <span className="text-sm text-muted">无待审</span>
+          )}
+        </Link>
+      </div>
+
       <p className="mt-8 text-center text-xs text-muted">
-        （名单管理、学科配置、审批与统计将在后续步骤开放）
+        （名单管理、学科配置与统计将在后续步骤开放）
       </p>
     </main>
   );

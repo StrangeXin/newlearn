@@ -150,8 +150,39 @@ async function simulateLearning(
         seq,
       },
     });
+
+    // 真实进度与积分：达标记进度并发 1 基础分
+    const passed = fin.finalScore >= 60;
+    const prog = await prisma.keywordProgress.create({
+      data: {
+        userId: u.id,
+        keywordId: kw.id,
+        chapterId: ch1.id,
+        subjectId,
+        bestFinalScore: fin.finalScore,
+        isCompleted: passed,
+        completedAt: passed ? new Date() : null,
+      },
+    });
+    if (passed) {
+      await prisma.pointsLedger.create({
+        data: {
+          userId: u.id,
+          subjectId,
+          type: "BASE",
+          amount: 1,
+          keywordProgressId: prog.id,
+          memo: `完成「${kw.term}」`,
+        },
+      });
+    }
   }
-  console.log(`   🧬 模拟「${loginName}」完成 ${kws.length} 个关键词，画像更新 ${seq} 次`);
+  const passedCount = await prisma.keywordProgress.count({
+    where: { userId: u.id, isCompleted: true },
+  });
+  console.log(
+    `   🧬 模拟「${loginName}」完成 ${kws.length} 词（通过 ${passedCount}），画像更新 ${seq} 次`,
+  );
 }
 
 const DEMO_USERS: { name: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] =
@@ -262,6 +293,20 @@ async function main() {
     },
     [0.3, 0.55, 0.85, 0.65, 0.95, 1.0],
   );
+
+  // 给李四种一个待审兑换，演示审批流
+  const liSi = await prisma.user.findUnique({ where: { loginName: "李四" } });
+  if (liSi) {
+    await prisma.redemption.create({
+      data: {
+        userId: liSi.id,
+        subjectId: subject.id,
+        item: "技术书籍《深度学习》",
+        amount: 3,
+        status: "PENDING",
+      },
+    });
+  }
 
   console.log(
     `✅ 完成：${DEMO_USERS.length} 个账号、学科「${subject.title}」共 ${data.chapters.length} 章 / ${total} 关键词，已激活为当前学科。`,

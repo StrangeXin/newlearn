@@ -6,6 +6,7 @@
 // ===========================================================================
 
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { getLearnerContext } from "@/lib/learner";
 import { applyMemoryUpdate } from "@/lib/memory";
 import { getScoringService, PASS_THRESHOLD, type Keyword } from "@/lib/scoring";
@@ -158,9 +159,11 @@ export async function completeAttempt(
     },
   });
 
-  // 达标记 1 积分（幂等：每个进度至多一条 BASE 流水）
+  // 达标记 1 积分。自愈式：只要进度已完成且尚无 BASE 流水就补发（不依赖一次性的
+  // newlyCompleted，避免某次瞬时故障后因 isCompleted 已 true 而永久漏发）。
+  // 幂等由 @@unique([type, keywordProgressId]) 保证：P2002 视为已发，其它错误抛出。
   let awardedPoint = false;
-  if (newlyCompleted) {
+  if (progress.isCompleted) {
     try {
       await prisma.pointsLedger.create({
         data: {
@@ -173,9 +176,10 @@ export async function completeAttempt(
         },
       });
       awardedPoint = true;
-    } catch {
-      // 唯一约束兜底：已发过则忽略
-      awardedPoint = false;
+    } catch (e) {
+      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) {
+        throw e;
+      }
     }
   }
 
