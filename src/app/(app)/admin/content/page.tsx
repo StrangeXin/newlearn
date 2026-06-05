@@ -44,68 +44,115 @@ export default async function AdminContentPage() {
     : null;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <Link href="/admin" className="text-sm text-muted transition hover:text-brand-700">
+    <main className="animate-float-in page py-8">
+      <Link
+        href="/admin"
+        className="text-sm font-medium text-muted transition hover:text-brand-700"
+      >
         ← 管理后台
       </Link>
       <h1 className="mt-3 text-2xl font-extrabold text-ink">学科与内容</h1>
+      <p className="mt-1 text-sm text-muted">
+        新建学科后用 JSON 一次导入「5 章 + 100 词」，再逐词补全简介与参考考核要点。设为当前学科的内容，员工端才会闯关。
+      </p>
 
-      <section className="mt-5">
-        <h2 className="mb-2 font-bold text-ink">学科</h2>
-        <div className="mb-3 rounded-2xl border border-brand-100 bg-white/90 p-4">
-          <CreateSubjectForm />
-          <p className="mt-2 text-xs text-muted">
-            新建空学科后，可在下方用 JSON 批量导入「5 章 + 100 词」内容（结构同 prisma/seed-data）。
-          </p>
+      <section className="mt-6">
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-bold text-ink">学科</h2>
+          <span className="text-xs font-medium text-muted">
+            共 {subjects.length} 个
+          </span>
         </div>
-        <ul className="divide-y divide-brand-100 rounded-2xl border border-brand-100 bg-white/90">
-          {subjects.map((s) => (
-            <li key={s.id} className="px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-ink">{s.title}</span>
-                  <span className="ml-2 text-xs text-muted">{s._count.chapters} 章</span>
-                </div>
-                <SetActiveButton subjectId={s.id} active={s.id === activeId} />
-              </div>
-              {s._count.chapters === 0 && (
-                <div className="mt-2">
-                  <ImportContentForm subjectId={s.id} />
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="card mb-3 p-4">
+          <CreateSubjectForm />
+        </div>
+        {subjects.length === 0 ? (
+          <div className="card flex flex-col items-center px-6 py-12 text-center">
+            <span className="badge badge-muted">还没有学科</span>
+            <p className="mt-3 max-w-sm text-sm text-muted">
+              在上方填一个学科名（如「人工智能」），新建后即可导入它的章节与关键词。
+            </p>
+          </div>
+        ) : (
+          <ul className="card divide-y divide-line p-0">
+            {subjects.map((s) => {
+              const isActive = s.id === activeId;
+              return (
+                <li
+                  key={s.id}
+                  className={`px-4 py-3.5 ${isActive ? "bg-brand-50" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="font-semibold text-ink">{s.title}</span>
+                      <span className="ml-2 text-xs font-medium text-muted">
+                        {s._count.chapters > 0
+                          ? `${s._count.chapters} 章`
+                          : "未导入内容"}
+                      </span>
+                    </div>
+                    <SetActiveButton subjectId={s.id} active={isActive} />
+                  </div>
+                  {s._count.chapters === 0 && (
+                    <div className="mt-3">
+                      <ImportContentForm subjectId={s.id} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       {activeSubject && (
         <>
-          <section className="mt-6 rounded-2xl border border-brand-100 bg-white/90 p-4 shadow-sm">
-            <h2 className="mb-2 font-bold text-ink">开始日（决定每周解锁）</h2>
+          <section className="card mt-6 p-4">
+            <h2 className="text-lg font-bold text-ink">开课开始日</h2>
+            <p className="field-hint mb-3 mt-0.5">
+              从这一天所在的自然周（周一至周日）起算，每周顺序解锁一章。
+            </p>
             <StartDateForm value={toDateInput(activeSubject.startDate)} />
           </section>
 
           <section className="mt-6">
-            <h2 className="mb-2 font-bold text-ink">关键词内容（{activeSubject.title}）</h2>
-            <div className="space-y-4">
-              {activeSubject.chapters.map((ch) => (
-                <div key={ch.id}>
-                  <div className="mb-2 text-sm font-bold text-brand-700">
-                    第 {ch.index} 章 · {ch.title}
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-bold text-ink">关键词内容</h2>
+              <span className="badge badge-success">
+                ✓ 当前学科 · {activeSubject.title}
+              </span>
+            </div>
+            <p className="field-hint mb-4">
+              点开关键词填写简介与参考考核要点，简介对员工可见，考核要点只用于辅助 AI 打分。
+            </p>
+            <div className="space-y-6">
+              {activeSubject.chapters.map((ch) => {
+                const filled = ch.keywords.filter(
+                  (kw) => kw.description && kw.referencePoints,
+                ).length;
+                return (
+                  <div key={ch.id}>
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="badge badge-brand">第 {ch.index} 章</span>
+                      <span className="text-sm font-semibold text-ink">{ch.title}</span>
+                      <span className="text-xs font-medium text-muted">
+                        {filled}/{ch.keywords.length} 词已补全
+                      </span>
+                    </div>
+                    <div className="grid gap-1.5 lg:grid-cols-2">
+                      {ch.keywords.map((kw) => (
+                        <KeywordEditor
+                          key={kw.id}
+                          keywordId={kw.id}
+                          term={kw.term}
+                          description={kw.description ?? ""}
+                          referencePoints={kw.referencePoints ?? ""}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {ch.keywords.map((kw) => (
-                      <KeywordEditor
-                        key={kw.id}
-                        keywordId={kw.id}
-                        term={kw.term}
-                        description={kw.description ?? ""}
-                        referencePoints={kw.referencePoints ?? ""}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         </>

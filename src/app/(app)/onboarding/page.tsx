@@ -13,16 +13,37 @@ export default async function OnboardingPage() {
   if (existing) redirect("/learn");
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
+    <main className="page-narrow py-10">
       <div className="animate-float-in">
-        <h1 className="text-2xl font-extrabold text-ink">先认识一下你 👋</h1>
-        <p className="mt-2 text-sm text-muted">
-          花一分钟填几项资料。系统会据此为你量身定制追问，让 AI
-          知识更贴合你的岗位、真正用到工作里——而不是照本宣科。
+        <span className="badge badge-brand">第 1 步 · 认识你</span>
+        <h1 className="mt-3 text-2xl font-bold text-ink">先认识一下你，{user.name}</h1>
+        <p className="mt-2 max-w-prose leading-relaxed text-muted">
+          填写你的岗位、背景和想用 AI 解决的问题，之后 AI 的追问会结合你的实际工作，而不是套用通用模板。
+          填完即可进入第 1 关。
         </p>
+        <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted">
+          <li className="flex items-center gap-1.5">
+            <span className="text-brand-600" aria-hidden>
+              ✓
+            </span>
+            追问贴你的岗位
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="text-brand-600" aria-hidden>
+              ✓
+            </span>
+            画像随学习自动更新
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="text-brand-600" aria-hidden>
+              ✓
+            </span>
+            资料随时可改
+          </li>
+        </ul>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-brand-100 bg-white/90 p-6 shadow-xl shadow-brand-600/5">
+      <div className="card mt-6 p-6 sm:p-7">
         <OnboardingForm />
       </div>
     </main>

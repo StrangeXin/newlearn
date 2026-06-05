@@ -7,9 +7,19 @@ export function SettleButton({ chapterId }: { chapterId: string }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
 
+  const isError = msg.startsWith("✗");
+
   return (
     <div className="flex items-center gap-2">
-      {msg && <span className="text-xs text-muted">{msg}</span>}
+      {msg && (
+        <span
+          className={`inline-flex items-center gap-1 text-xs font-medium ${
+            isError ? "text-danger-600" : "text-success-600"
+          }`}
+        >
+          {msg}
+        </span>
+      )}
       <button
         type="button"
         disabled={pending}
@@ -20,7 +30,7 @@ export function SettleButton({ chapterId }: { chapterId: string }) {
             setMsg(r.error ? `✗ ${r.error}` : `✓ 已结算 ${r.count ?? 0} 人`);
           })
         }
-        className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+        className="btn btn-primary btn-sm shrink-0"
       >
         {pending ? "结算中…" : "结算本章排名"}
       </button>

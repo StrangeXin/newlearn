@@ -5,12 +5,13 @@ import { requireUser } from "@/lib/auth/user";
 import { parseTags } from "@/lib/memory-diff";
 import { ProfileEditForm } from "./profile-edit-form";
 
-function Chips({ items, color }: { items: string[]; color: string }) {
-  if (items.length === 0) return <span className="text-xs text-muted">（暂无）</span>;
+function Chips({ items, badge }: { items: string[]; badge: string }) {
+  if (items.length === 0)
+    return <span className="text-sm text-muted">尚未识别，多答几个词就有了</span>;
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((t) => (
-        <span key={t} className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}>
+        <span key={t} className={`badge ${badge}`}>
           {t}
         </span>
       ))}
@@ -29,75 +30,90 @@ export default async function ProfilePage() {
   if (!profile) redirect("/onboarding");
 
   const tags = parseTags(memory?.tags);
+  const hasPortrait = !!memory && memory.updateCount > 0;
+  const weaknesses = [...tags.weaknesses, ...tags.blindSpots];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <div className="animate-float-in flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-ink">我的资料</h1>
-        <Link
-          href="/growth"
-          className="rounded-xl border border-brand-200 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
-        >
-          查看成长轨迹 →
-        </Link>
+    <main className="page-narrow py-8">
+      <div className="animate-float-in">
+        <h1 className="text-2xl font-bold text-ink">我的资料</h1>
+        <p className="mt-1.5 max-w-prose leading-relaxed text-muted">
+          这里有两部分：上面是你填的基本资料，AI 用它来调整追问的角度；下面是 AI
+          边批改边写下的画像，只读，会越来越懂你。
+        </p>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-brand-100 bg-white/90 p-6 shadow-sm">
-        <h2 className="mb-4 font-bold text-ink">基本资料（可编辑）</h2>
-        <ProfileEditForm
-          values={{
-            position: profile.position,
-            department: profile.department,
-            level: profile.level,
-            background: profile.background,
-            aiFamiliarity: profile.aiFamiliarity,
-            applicationAreas: profile.applicationAreas,
-          }}
-        />
+      <section className="card mt-6 p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-ink">基本资料</h2>
+          <span className="text-xs text-muted">改了即时生效，下次追问就会参考</span>
+        </div>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          换了岗位或想把 AI 用在新场景，随时来改。
+        </p>
+        <div className="mt-5">
+          <ProfileEditForm
+            values={{
+              position: profile.position,
+              department: profile.department,
+              level: profile.level,
+              background: profile.background,
+              aiFamiliarity: profile.aiFamiliarity,
+              applicationAreas: profile.applicationAreas,
+            }}
+          />
+        </div>
       </section>
 
-      <section className="mt-6 rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold text-ink">🤖 AI 对你的画像</h2>
-          <span className="text-xs text-muted">由系统维护，只读</span>
+      <section className="panel mt-6 p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-ink">AI 对你的画像</h2>
+          <span className="badge badge-muted">系统维护 · 只读</span>
         </div>
-        {memory && memory.updateCount > 0 ? (
-          <div className="mt-4 space-y-3 text-sm">
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          {hasPortrait
+            ? `已根据你的 ${memory.updateCount} 个关键词作答整理出来，每通过一个词就会更新一次。`
+            : "提交并通过关键词后，AI 会从你的作答里提炼这张画像。"}
+        </p>
+
+        {hasPortrait ? (
+          <div className="mt-5 space-y-5 text-sm">
             <div>
-              <div className="text-xs font-medium text-muted">掌握强项</div>
-              <div className="mt-1">
-                <Chips items={tags.strengths} color="bg-success-500/15 text-success-500" />
-              </div>
+              <div className="field-label">掌握强项</div>
+              <Chips items={tags.strengths} badge="badge-success" />
             </div>
             <div>
-              <div className="text-xs font-medium text-muted">待加强 / 盲区</div>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                <Chips items={[...tags.weaknesses, ...tags.blindSpots]} color="bg-accent-500/15 text-accent-500" />
-              </div>
+              <div className="field-label">待加强 / 盲区</div>
+              <Chips items={weaknesses} badge="badge-muted" />
             </div>
             <div>
-              <div className="text-xs font-medium text-muted">兴趣方向</div>
-              <div className="mt-1">
-                <Chips items={tags.interests} color="bg-brand-100 text-brand-700" />
-              </div>
+              <div className="field-label">兴趣方向</div>
+              <Chips items={tags.interests} badge="badge-brand" />
             </div>
-            <details className="mt-2">
-              <summary className="cursor-pointer text-xs font-medium text-brand-700">
-                查看完整画像（Markdown）
+            <details className="rounded-xl border border-line bg-surface">
+              <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-brand-700">
+                展开完整画像
               </summary>
-              <pre className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-3 text-xs leading-relaxed text-ink">
+              <pre className="whitespace-pre-wrap border-t border-line px-3 py-3 font-mono text-xs leading-relaxed text-ink">
                 {memory.portrait}
               </pre>
             </details>
+            <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+              <span className="text-xs text-muted">想看它一步步变清晰的过程？</span>
+              <Link href="/growth" className="btn btn-secondary btn-sm shrink-0">
+                成长轨迹 →
+              </Link>
+            </div>
           </div>
         ) : (
-          <p className="mt-3 text-sm text-muted">
-            完成第一个关键词后，AI 就会开始为你画像。去
-            <Link href="/learn" className="text-brand-700 underline">
-              闯关
+          <div className="mt-5 rounded-xl border border-line bg-surface px-5 py-8 text-center">
+            <p className="mx-auto max-w-sm leading-relaxed text-muted">
+              答完第一个关键词，这里就会出现你的第一张画像，之后每答一词都会更新。
+            </p>
+            <Link href="/learn" className="btn btn-primary mt-4">
+              去闯关 →
             </Link>
-            吧！
-          </p>
+          </div>
         )}
       </section>
     </main>

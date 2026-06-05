@@ -13,7 +13,8 @@ export function ScheduleControls() {
         type="button"
         disabled={pending}
         onClick={() => shift(-1)}
-        className="rounded-lg border border-brand-200 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
+        className="btn btn-danger btn-sm"
+        title="回退会把开始日往后推，可能重新锁住已解锁的关卡"
       >
         ← 回退一周
       </button>
@@ -21,10 +22,11 @@ export function ScheduleControls() {
         type="button"
         disabled={pending}
         onClick={() => shift(1)}
-        className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+        className="btn btn-secondary btn-sm"
       >
         快进一周 →
       </button>
+      {pending && <span className="text-xs text-muted">调整中…</span>}
     </div>
   );
 }

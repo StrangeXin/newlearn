@@ -12,48 +12,105 @@ export default async function AdminUsersPage() {
     select: { id: true, name: true, role: true, isActivated: true },
   });
 
+  const activated = users.filter((u) => u.isActivated).length;
+  const pending = users.length - activated;
+  const adminCount = users.filter((u) => u.role !== "EMPLOYEE").length;
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="page py-8">
       <Link href="/admin" className="text-sm text-muted transition hover:text-brand-700">
         ← 管理后台
       </Link>
-      <h1 className="mt-3 text-2xl font-extrabold text-ink">员工名单</h1>
-      <p className="mt-1 text-sm text-muted">
-        预导入员工后，员工用「姓名 + 默认密码」首登激活。共 {users.length} 人。
-      </p>
-
-      <section className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-brand-100 bg-white/90 p-4 shadow-sm">
-          <h2 className="mb-2 text-sm font-bold text-ink">添加单人</h2>
-          <AddUserForm />
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink">员工名单</h1>
+          <p className="mt-1 text-sm text-muted">
+            预导入名单，员工用「姓名 + 默认密码 Aa123456!」首次登录，登录后强制改密即算激活。
+          </p>
         </div>
-        <div className="rounded-2xl border border-brand-100 bg-white/90 p-4 shadow-sm">
-          <h2 className="mb-2 text-sm font-bold text-ink">批量导入</h2>
-          <ImportUsersForm />
+        <dl className="flex shrink-0 items-center gap-5 text-sm">
+          <div>
+            <dt className="text-xs font-medium text-muted">在册</dt>
+            <dd className="text-lg font-bold tabular-nums text-ink">{users.length}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-muted">已激活</dt>
+            <dd className="text-lg font-bold tabular-nums text-ink">{activated}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-muted">待登录</dt>
+            <dd className="text-lg font-bold tabular-nums text-ink">{pending}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-muted">管理员</dt>
+            <dd className="text-lg font-bold tabular-nums text-ink">{adminCount}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <section className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="card p-5">
+          <h2 className="text-sm font-bold text-ink">添加单人</h2>
+          <p className="mt-0.5 text-xs text-muted">逐个录入，可直接指定为管理员。</p>
+          <div className="mt-4">
+            <AddUserForm />
+          </div>
+        </div>
+        <div className="card p-5">
+          <h2 className="text-sm font-bold text-ink">批量导入</h2>
+          <p className="mt-0.5 text-xs text-muted">粘贴一整列姓名，重名自动跳过，全部按员工身份创建。</p>
+          <div className="mt-4">
+            <ImportUsersForm />
+          </div>
         </div>
       </section>
 
-      <section className="mt-6">
-        <ul className="divide-y divide-brand-100 rounded-2xl border border-brand-100 bg-white/90">
-          {users.map((u) => (
-            <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-ink">{u.name}</span>
-                <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs text-brand-700">
-                  {roleLabel(u.role)}
-                </span>
-                <span className={`text-xs ${u.isActivated ? "text-success-500" : "text-muted"}`}>
-                  {u.isActivated ? "已激活" : "未激活"}
-                </span>
-              </div>
-              <UserRowActions
-                userId={u.id}
-                role={u.role}
-                canManageRole={isSuper && u.id !== me.id}
-              />
-            </li>
-          ))}
-        </ul>
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-ink">全部成员</h2>
+          {pending > 0 && (
+            <span className="text-xs text-muted">
+              <span className="font-semibold tabular-nums text-ink">{pending}</span> 人尚未首次登录
+            </span>
+          )}
+        </div>
+        {users.length === 0 ? (
+          <div className="card flex flex-col items-center px-6 py-12 text-center">
+            <h3 className="text-base font-bold text-ink">名单还是空的</h3>
+            <p className="mt-1.5 max-w-sm text-sm text-muted">
+              用上方「批量导入」粘贴员工姓名一次建好，或「添加单人」逐个录入。建好后把默认密码
+              Aa123456! 告诉员工即可。
+            </p>
+          </div>
+        ) : (
+          <ul className="card divide-y divide-line overflow-hidden">
+            {users.map((u) => (
+              <li
+                key={u.id}
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3"
+              >
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="truncate font-medium text-ink">{u.name}</span>
+                  {u.role !== "EMPLOYEE" ? (
+                    <span className="badge badge-brand">{roleLabel(u.role)}</span>
+                  ) : (
+                    <span className="badge badge-muted">{roleLabel(u.role)}</span>
+                  )}
+                  {u.isActivated ? (
+                    <span className="badge badge-success">✓ 已激活</span>
+                  ) : (
+                    <span className="badge badge-muted">待登录</span>
+                  )}
+                </div>
+                <UserRowActions
+                  userId={u.id}
+                  role={u.role}
+                  canManageRole={isSuper && u.id !== me.id}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );

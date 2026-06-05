@@ -18,13 +18,13 @@ export function RowActions({ id }: { id: string }) {
     });
 
   return (
-    <div className="flex items-center gap-2">
-      {error && <span className="text-xs text-danger-500">{error}</span>}
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {error && <span className="field-error w-full text-right">{error}</span>}
       <button
         type="button"
         disabled={pending}
         onClick={() => run(rejectRedemptionAction)}
-        className="rounded-lg border border-brand-200 px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-brand-50 disabled:opacity-50"
+        className="btn btn-danger btn-sm"
       >
         驳回
       </button>
@@ -32,9 +32,9 @@ export function RowActions({ id }: { id: string }) {
         type="button"
         disabled={pending}
         onClick={() => run(approveRedemptionAction)}
-        className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+        className="btn btn-primary btn-sm"
       >
-        {pending ? "处理中…" : "通过"}
+        {pending ? "处理中…" : "通过审批"}
       </button>
     </div>
   );

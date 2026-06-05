@@ -22,26 +22,25 @@ export function FollowupsForm({
       <input type="hidden" name="keywordId" value={keywordId} />
       {followups.map((f, i) => (
         <div key={f.id}>
-          <label className="block text-sm font-medium text-ink">
-            追问 {i + 1}：{f.question}
+          <label className="field-label">
+            <span className="badge badge-brand mr-2">追问 {i + 1}</span>
+            {f.question}
           </label>
           <textarea
             name="answer"
             rows={3}
             required
-            placeholder="认真回答会影响最终评分"
-            className="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2.5 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+            placeholder="结合你的工作具体作答"
+            className="textarea mt-1"
           />
         </div>
       ))}
       {state?.error && (
-        <p className="rounded-lg bg-danger-500/10 px-3 py-2 text-sm text-danger-500">{state.error}</p>
+        <p className="badge-danger rounded-lg px-3 py-2 text-sm font-medium" role="alert">
+          {state.error}
+        </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className="btn btn-primary">
         {pending ? "AI 正在综合评定…" : "提交回答，看最终得分"}
       </button>
     </form>

@@ -33,13 +33,25 @@ export default async function ReflectPage({
   const completed = await isChapterFullyCompleted(user.id, chapter.id);
   if (!completed) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <Link href={`/learn/chapter/${chapter.index}`} className="text-sm text-muted hover:text-brand-700">
+      <main className="animate-float-in page-narrow py-8">
+        <Link
+          href={`/learn/chapter/${chapter.index}`}
+          className="text-sm font-medium text-muted transition hover:text-brand-700"
+        >
           ← 返回章节
         </Link>
-        <div className="mt-8 text-4xl">🧩</div>
-        <h1 className="mt-3 text-2xl font-extrabold text-ink">先通关本章全部关键词</h1>
-        <p className="mt-2 text-muted">完成《{chapter.title}》的全部关键词后，才能做章节反思。</p>
+        <div className="card mt-6 flex flex-col items-center px-6 py-14 text-center">
+          <span className="map-node map-node-locked h-14 w-14 text-2xl" aria-hidden>
+            🧩
+          </span>
+          <h1 className="mt-5 text-2xl font-extrabold text-ink">章节反思还没解锁</h1>
+          <p className="mt-2 max-w-sm leading-relaxed text-muted">
+            通关《{chapter.title}》的全部 20 个关键词后，这里会出现一组结合你岗位的反思问题，帮你把本章所学落到日常工作里。
+          </p>
+          <Link href={`/learn/chapter/${chapter.index}`} className="btn btn-primary mt-6">
+            回到本章继续闯关
+          </Link>
+        </div>
       </main>
     );
   }
@@ -47,48 +59,79 @@ export default async function ReflectPage({
   const reflection = await getOrCreateReflection(user.id, chapter.id);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <Link href={`/learn/chapter/${chapter.index}`} className="text-sm text-muted hover:text-brand-700">
+    <main className="animate-float-in page-narrow py-8">
+      <Link
+        href={`/learn/chapter/${chapter.index}`}
+        className="text-sm font-medium text-muted transition hover:text-brand-700"
+      >
         ← 返回章节
       </Link>
-      <h1 className="mt-3 text-2xl font-extrabold text-ink">章节反思 · {chapter.title}</h1>
-      <p className="mt-1 text-sm text-muted">
-        把本章学到的，结合你的岗位和实际工作想一想——这一步帮你真正用起来。
-      </p>
+      <div className="mt-3 flex items-start gap-4">
+        <span
+          className={`map-node h-12 w-12 shrink-0 text-lg ${reflection.done ? "map-node-done" : "map-node-open"}`}
+          aria-hidden
+        >
+          {reflection.done ? "✓" : "🧩"}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-semibold text-brand-700">
+            第 {chapter.index} 关 · 章节反思
+          </div>
+          <h1 className="mt-0.5 text-2xl font-extrabold text-ink">{chapter.title}</h1>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            20 个关键词已全部通关。趁记忆还热，把本章所学接到你手上的具体工作上：回答下面几个结合岗位的问题，AI 会据此更新你的成长画像。
+          </p>
+        </div>
+      </div>
 
-      <div className="mt-6 rounded-2xl border border-brand-100 bg-white/90 p-6 shadow-sm">
-        {reflection.done ? (
-          <div>
-            <div className="mb-3 text-2xl">✅</div>
-            <h2 className="font-bold text-ink">本章反思已完成</h2>
-            <p className="mt-2 whitespace-pre-wrap rounded-xl bg-brand-50 p-3 text-sm text-ink">
+      {reflection.done ? (
+        <>
+          <div className="card mt-6 p-6">
+            <div className="flex items-center gap-2">
+              <span className="badge badge-success">✓ 反思已完成</span>
+              <h2 className="font-bold text-ink">AI 给你的本章小结</h2>
+            </div>
+            <p className="panel mt-4 whitespace-pre-wrap p-4 text-sm leading-relaxed text-ink">
               {reflection.summary}
             </p>
-            <div className="mt-4 space-y-2">
-              {reflection.questions.map((q, i) => (
-                <details key={i} className="rounded-xl border border-brand-100 px-3 py-2">
-                  <summary className="cursor-pointer text-sm font-medium text-ink">{q}</summary>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-muted">
-                    {reflection.answers[i] || "（未作答）"}
-                  </p>
-                </details>
-              ))}
-            </div>
-            <p className="mt-4 text-xs text-muted">
-              AI 已据本次反思丰富了你的画像 ·{" "}
-              <Link href="/growth" className="text-brand-700 underline">
-                看成长轨迹
-              </Link>
-            </p>
           </div>
-        ) : (
+
+          <h2 className="mt-7 text-sm font-semibold text-muted">你的逐题作答</h2>
+          <div className="mt-3 space-y-2.5">
+            {reflection.questions.map((q, i) => (
+              <details key={i} className="card px-4 py-3">
+                <summary className="flex cursor-pointer items-start gap-2 text-sm font-medium text-ink">
+                  <span className="text-brand-700">{i + 1}.</span>
+                  <span className="flex-1">{q}</span>
+                </summary>
+                <p className="mt-2.5 whitespace-pre-wrap border-t border-line pt-2.5 text-sm leading-relaxed text-muted">
+                  {reflection.answers[i] || "（未作答）"}
+                </p>
+              </details>
+            ))}
+          </div>
+
+          <div className="panel mt-6 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div>
+              <div className="font-bold text-ink">画像已据这次反思更新</div>
+              <p className="mt-0.5 text-sm text-muted">
+                去成长轨迹看 AI 对你的最新理解，以及和上一次相比变了哪些。
+              </p>
+            </div>
+            <Link href="/growth" className="btn btn-primary btn-sm shrink-0">
+              看成长轨迹 →
+            </Link>
+          </div>
+        </>
+      ) : (
+        <div className="card mt-6 p-5 sm:p-6">
           <ReflectForm
             chapterId={chapter.id}
             chapterIndex={chapter.index}
             questions={reflection.questions}
           />
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

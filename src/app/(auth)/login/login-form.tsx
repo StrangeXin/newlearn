@@ -11,7 +11,7 @@ export function LoginForm() {
   return (
     <form action={action} className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-ink">
+        <label htmlFor="name" className="field-label">
           姓名
         </label>
         <input
@@ -20,13 +20,13 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          placeholder="请输入你的姓名"
-          className="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2.5 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          placeholder="与名单一致的姓名"
+          className="input"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-ink">
+        <label htmlFor="password" className="field-label">
           密码
         </label>
         <input
@@ -35,23 +35,23 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          placeholder="首次登录请输入默认密码"
-          className="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2.5 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          placeholder="首次登录填默认密码"
+          className="input"
         />
+        <p className="field-hint mt-1.5">
+          还没改过密码？默认密码是{" "}
+          <span className="badge badge-muted font-mono">Aa123456!</span>
+        </p>
       </div>
 
       {state?.error && (
-        <p className="rounded-lg bg-danger-500/10 px-3 py-2 text-sm text-danger-500">
+        <p className="field-error" role="alert">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 disabled:opacity-60"
-      >
-        {pending ? "登录中…" : "登录 / 注册"}
+      <button type="submit" disabled={pending} className="btn btn-primary btn-block">
+        {pending ? "登录中…" : "登录并开始闯关"}
       </button>
     </form>
   );

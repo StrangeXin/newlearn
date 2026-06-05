@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
@@ -23,63 +24,134 @@ export default async function LeaderboardPage() {
     getChapterWinners(cfg.activeSubjectId),
   ]);
 
-  return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-extrabold text-ink">排行榜</h1>
-      <p className="mt-1 text-sm text-muted">学科：{cfg.activeSubject?.title} · 一起学、互相比</p>
+  const myRow = leaders.find((r) => r.userId === user.id);
+  const myRank = myRow ? leaders.findIndex((r) => r.userId === user.id) + 1 : null;
 
-      <section className="mt-6">
-        <h2 className="mb-3 font-bold text-ink">🏅 积分榜</h2>
-        {leaders.length === 0 ? (
-          <p className="text-sm text-muted">还没有人上榜，快去闯关赚积分！</p>
+  return (
+    <main className="page py-8">
+      <div className="animate-float-in flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">排行榜</h1>
+          <p className="mt-1.5 text-muted">
+            {cfg.activeSubject?.title} · 积分可兑换书籍和工具，每章前 3 名另奖 100 分。
+          </p>
+        </div>
+        {myRow ? (
+          <div className="rounded-xl border border-line bg-brand-50 px-4 py-2.5 text-center">
+            <div className="text-2xl font-extrabold tabular-nums text-brand-700">
+              第 {myRank} 名
+            </div>
+            <div className="text-xs font-medium text-muted">
+              你已有 <span className="text-accent-700">{myRow.points}</span> 分
+            </div>
+          </div>
         ) : (
-          <ul className="space-y-1">
-            {leaders.map((r, i) => (
-              <li
-                key={r.userId}
-                className={`flex items-center justify-between rounded-xl px-4 py-2.5 ${
-                  i < 3 ? "bg-gradient-to-r from-brand-50 to-white" : "odd:bg-brand-50/40"
-                } ${r.userId === user.id ? "ring-2 ring-brand-300" : ""}`}
-              >
-                <span className="flex items-center gap-3">
-                  <span className="w-6 text-center font-bold">
-                    {i < 3 ? medal[i] : i + 1}
+          <div className="rounded-xl border border-line bg-surface px-4 py-2.5 text-center">
+            <div className="text-sm font-bold text-ink">你还没上榜</div>
+            <div className="text-xs text-muted">完成一整章即可入榜</div>
+          </div>
+        )}
+      </div>
+
+      <section className="mt-7">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="font-bold text-ink">积分榜</h2>
+          <span className="text-xs text-muted">按累计积分排序 · 只展示靠前的同学</span>
+        </div>
+        {leaders.length === 0 ? (
+          <div className="card flex flex-col items-center px-6 py-12 text-center">
+            <span className="map-node map-node-locked h-14 w-14 text-2xl" aria-hidden>
+              🏁
+            </span>
+            <h3 className="mt-5 text-lg font-bold text-ink">还没有人上榜</h3>
+            <p className="mt-2 max-w-md text-sm text-muted">
+              完成一整章 20 个关键词即可进入排名，每章前 3 名另奖 100 积分。
+            </p>
+            <Link href="/learn" className="btn btn-primary mt-6">
+              去闯关 →
+            </Link>
+          </div>
+        ) : (
+          <ul className="overflow-hidden rounded-xl border border-line bg-surface">
+            {leaders.map((r, i) => {
+              const rank = i + 1;
+              const isFirst = rank === 1;
+              const isTop3 = rank <= 3;
+              const isMe = r.userId === user.id;
+              return (
+                <li
+                  key={r.userId}
+                  className={`flex items-center justify-between gap-3 border-b border-line px-3 py-3 last:border-b-0 sm:px-4 ${
+                    isMe ? "bg-brand-50" : isFirst ? "bg-accent-100/45" : ""
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center text-center text-sm font-bold tabular-nums ${
+                        isTop3
+                          ? "rounded-full bg-accent-100 text-base text-accent-700"
+                          : "text-muted"
+                      }`}
+                      aria-hidden={isTop3}
+                    >
+                      {isTop3 ? medal[i] : rank}
+                    </span>
+                    <span className="truncate font-semibold text-ink">{r.name}</span>
+                    {isMe && (
+                      <span className="badge badge-brand shrink-0">你</span>
+                    )}
                   </span>
-                  <span className="font-medium text-ink">{r.name}</span>
-                  {r.userId === user.id && <span className="text-xs text-brand-700">（你）</span>}
-                </span>
-                <span className="flex items-center gap-3 text-sm text-muted">
-                  <span>{r.completed} 词</span>
-                  <span className="font-bold text-accent-500">{r.points} 分</span>
-                </span>
-              </li>
-            ))}
+                  <span className="flex shrink-0 items-center gap-3 text-sm">
+                    <span className="hidden tabular-nums text-muted sm:inline">
+                      {r.completed} 词
+                    </span>
+                    <span className="font-bold tabular-nums text-accent-700">{r.points} 分</span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 font-bold text-ink">🏆 各章冠军</h2>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="font-bold text-ink">各章冠军</h2>
+          <span className="text-xs text-muted">每周日夜结算 · 完成全部 20 词才入选</span>
+        </div>
         {winners.length === 0 ? (
-          <p className="text-sm text-muted">还没有章节完成结算。</p>
+          <div className="card flex flex-col items-center px-6 py-12 text-center">
+            <span className="map-node map-node-locked h-14 w-14 text-2xl" aria-hidden>
+              🏆
+            </span>
+            <h3 className="mt-5 text-lg font-bold text-ink">还没有章节结算</h3>
+            <p className="mt-2 max-w-md text-sm text-muted">
+              每周日结算当周章节，按 20 个关键词的平均分取前 3 名，各奖 100 积分。
+            </p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {winners.map((w) => (
-              <div key={w.chapterIndex} className="rounded-xl border border-brand-100 bg-white/80 p-4">
-                <div className="text-sm font-bold text-ink">
-                  第 {w.chapterIndex} 章 · {w.chapterTitle}
+              <div key={w.chapterIndex} className="card p-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-ink">
+                  <span className="badge badge-brand shrink-0">第 {w.chapterIndex} 章</span>
+                  <span className="truncate">{w.chapterTitle}</span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <ul className="mt-3 space-y-1.5">
                   {w.winners.map((win, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700"
-                    >
-                      {win.rank <= 3 ? medal[win.rank - 1] : `${win.rank}`} {win.name}
-                      <span className="text-muted">· {win.avgScore.toFixed(0)}</span>
-                    </span>
+                    <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="text-base" aria-hidden>
+                          {medal[win.rank - 1] ?? win.rank}
+                        </span>
+                        <span className="truncate font-medium text-ink">{win.name}</span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-accent-700">
+                        均 {win.avgScore.toFixed(0)} 分
+                      </span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ))}
           </div>

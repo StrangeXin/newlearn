@@ -7,85 +7,55 @@ export function AppHeader({ user }: { user: User }) {
   const isAdmin = user.role !== "EMPLOYEE";
   const home = isAdmin ? "/admin" : "/learn";
 
+  const nav = isAdmin
+    ? [
+        { href: "/admin/users", label: "名单", hideOnMobile: true },
+        { href: "/admin/content", label: "内容", hideOnMobile: true },
+        { href: "/admin/rankings", label: "排名" },
+        { href: "/admin/redemptions", label: "兑换审批" },
+      ]
+    : [
+        { href: "/leaderboard", label: "排行榜" },
+        { href: "/redeem", label: "兑换" },
+        { href: "/growth", label: "成长" },
+        { href: "/profile", label: "我的" },
+      ];
+
   return (
-    <header className="sticky top-0 z-20 border-b border-brand-100 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-        <Link href={home} className="font-extrabold text-brand-700">
-          智学闯关
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
+      <div className="page flex items-center justify-between gap-3 py-3">
+        <Link href={home} className="flex items-center gap-2 font-extrabold text-ink">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-sm text-white">
+            智
+          </span>
+          <span className="hidden sm:inline">智学闯关</span>
         </Link>
 
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          {!isAdmin && (
-            <>
-              <Link
-                href="/leaderboard"
-                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                排行榜
-              </Link>
-              <Link
-                href="/redeem"
-                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                兑换
-              </Link>
-              <Link
-                href="/growth"
-                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                成长
-              </Link>
-              <Link
-                href="/profile"
-                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                我的
-              </Link>
-            </>
-          )}
-          {isAdmin && (
-            <>
-              <Link
-                href="/admin/users"
-                className="hidden rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-block"
-              >
-                名单
-              </Link>
-              <Link
-                href="/admin/content"
-                className="hidden rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-block"
-              >
-                内容
-              </Link>
-              <Link
-                href="/admin/rankings"
-                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                排名
-              </Link>
-              <Link
-                href="/admin/redemptions"
-                className="rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                兑换审批
-              </Link>
-            </>
-          )}
-          <span className="hidden text-sm text-muted sm:inline">{user.name}</span>
-          <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700">
-            {roleLabel(user.role)}
-          </span>
+        <nav className="flex items-center gap-0.5 sm:gap-1">
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted transition hover:bg-brand-50 hover:text-brand-700 ${
+                "hideOnMobile" in item && item.hideOnMobile ? "hidden sm:inline-block" : ""
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-muted md:inline">{user.name}</span>
+          <span className="badge badge-brand">{roleLabel(user.role)}</span>
           <Link
             href="/change-password"
-            className="hidden rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-block"
+            className="hidden rounded-lg px-2 py-1.5 text-sm text-muted transition hover:bg-brand-50 hover:text-brand-700 lg:inline-block"
           >
-            修改密码
+            改密
           </Link>
           <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-lg border border-brand-200 px-2.5 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
-            >
+            <button type="submit" className="btn btn-secondary btn-sm">
               退出
             </button>
           </form>

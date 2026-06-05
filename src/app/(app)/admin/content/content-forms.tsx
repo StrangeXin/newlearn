@@ -11,20 +11,18 @@ import {
 } from "@/app/actions/admin";
 
 const initial: AdminState = {};
-const inputClass =
-  "rounded-xl border border-brand-200 bg-white px-3 py-2 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200";
 
 export function SetActiveButton({ subjectId, active }: { subjectId: string; active: boolean }) {
   const [pending, start] = useTransition();
   if (active) {
-    return <span className="rounded-full bg-success-500/15 px-3 py-1 text-xs font-bold text-success-500">当前学科</span>;
+    return <span className="badge badge-success">✓ 当前学科</span>;
   }
   return (
     <button
       type="button"
       disabled={pending}
       onClick={() => start(async () => void (await setActiveSubjectAction(subjectId)))}
-      className="rounded-lg border border-brand-200 px-3 py-1 text-xs font-medium text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
+      className="btn btn-secondary btn-sm"
     >
       设为当前
     </button>
@@ -34,17 +32,13 @@ export function SetActiveButton({ subjectId, active }: { subjectId: string; acti
 export function StartDateForm({ value }: { value: string }) {
   const [state, action, pending] = useActionState(setStartDateAction, initial);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input type="date" name="startDate" defaultValue={value} className={inputClass} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-      >
+    <form action={action} className="flex flex-wrap items-end gap-2">
+      <input type="date" name="startDate" defaultValue={value} className="input w-auto" />
+      <button type="submit" disabled={pending} className="btn btn-primary">
         保存开始日
       </button>
-      {state?.error && <span className="text-sm text-danger-500">{state.error}</span>}
-      {state?.ok && <span className="text-sm text-success-500">已保存 ✓</span>}
+      {state?.error && <span className="field-error">{state.error}</span>}
+      {state?.ok && <span className="text-sm font-medium text-success-600">已保存 ✓</span>}
     </form>
   );
 }
@@ -61,34 +55,43 @@ export function KeywordEditor({
   referencePoints: string;
 }) {
   const [state, action, pending] = useActionState(updateKeywordAction, initial);
+  const filled = Boolean(description && referencePoints);
   return (
-    <details className="rounded-xl border border-brand-100 bg-white/80 px-3 py-2">
-      <summary className="cursor-pointer text-sm font-medium text-ink">{term}</summary>
-      <form action={action} className="mt-2 space-y-2">
+    <details className="panel px-4 py-3 [&[open]>summary>.kw-caret]:rotate-90">
+      <summary className="flex cursor-pointer select-none items-center gap-2 text-sm font-semibold text-ink">
+        <span className="kw-caret text-xs text-muted transition-transform" aria-hidden>
+          ▶
+        </span>
+        <span className="flex-1 truncate">{term}</span>
+        {filled ? (
+          <span className="badge badge-success shrink-0">✓ 已补全</span>
+        ) : (
+          <span className="badge badge-muted shrink-0">待补全</span>
+        )}
+      </summary>
+      <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="keywordId" value={keywordId} />
         <div>
-          <label className="text-xs text-muted">简介</label>
-          <textarea name="description" rows={2} defaultValue={description} className={`w-full ${inputClass}`} />
+          <label className="field-label">简介</label>
+          <p className="field-hint mb-1">员工在关键词页能看到，一两句话说清这个词指什么。</p>
+          <textarea name="description" rows={2} defaultValue={description} className="textarea" />
         </div>
         <div>
-          <label className="text-xs text-muted">参考考核要点（辅助 AI 打分；分号分隔）</label>
+          <label className="field-label">参考考核要点</label>
+          <p className="field-hint mb-1">只用于辅助 AI 打分，员工看不到。多个要点用分号分隔。</p>
           <textarea
             name="referencePoints"
             rows={2}
             defaultValue={referencePoints}
-            className={`w-full ${inputClass}`}
+            className="textarea"
           />
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-          >
+          <button type="submit" disabled={pending} className="btn btn-primary btn-sm">
             保存
           </button>
-          {state?.error && <span className="text-xs text-danger-500">{state.error}</span>}
-          {state?.ok && <span className="text-xs text-success-500">已保存 ✓</span>}
+          {state?.error && <span className="field-error">{state.error}</span>}
+          {state?.ok && <span className="text-xs font-medium text-success-600">已保存 ✓</span>}
         </div>
       </form>
     </details>
@@ -98,44 +101,56 @@ export function KeywordEditor({
 export function CreateSubjectForm() {
   const [state, action, pending] = useActionState(createSubjectAction, initial);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input name="title" required placeholder="新学科名称，如「心理学」" className={`flex-1 ${inputClass}`} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-      >
-        新建学科
-      </button>
-      {state?.error && <span className="text-sm text-danger-500">{state.error}</span>}
-      {state?.ok && <span className="text-sm text-success-500">已创建 ✓</span>}
-    </form>
+    <div>
+      <label className="field-label">新建学科</label>
+      <form action={action} className="flex flex-wrap items-center gap-2">
+        <input
+          name="title"
+          required
+          placeholder="学科名称，如「人工智能」「医学」「心理学」"
+          className="input flex-1"
+        />
+        <button type="submit" disabled={pending} className="btn btn-primary">
+          新建学科
+        </button>
+        {state?.error && <span className="field-error w-full">{state.error}</span>}
+        {state?.ok && (
+          <span className="w-full text-sm font-medium text-success-600">
+            已创建，下方可导入它的章节内容 ✓
+          </span>
+        )}
+      </form>
+    </div>
   );
 }
 
 export function ImportContentForm({ subjectId }: { subjectId: string }) {
   const [state, action, pending] = useActionState(importSubjectContentAction, initial);
   return (
-    <details className="rounded-xl border border-brand-100 bg-white/80 px-3 py-2">
-      <summary className="cursor-pointer text-sm font-medium text-brand-700">导入内容（JSON）</summary>
-      <form action={action} className="mt-2 space-y-2">
+    <details className="panel px-4 py-3">
+      <summary className="cursor-pointer select-none text-sm font-semibold text-brand-700">
+        导入章节内容（JSON）
+      </summary>
+      <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="subjectId" value={subjectId} />
-        <textarea
-          name="json"
-          rows={6}
-          placeholder='{"chapters":[{"index":1,"title":"...","theme":"...","keywords":[{"term":"...","description":"...","referencePoints":"..."}]}]}'
-          className={`w-full font-mono text-xs ${inputClass}`}
-        />
+        <div>
+          <label className="field-label">内容 JSON</label>
+          <p className="field-hint mb-1">
+            结构同 prisma/seed-data：chapters 数组，每章含 index、title、theme 与 keywords。一次导入 5 章 100 词，导入后只能内联编辑，不能再次整体导入。
+          </p>
+          <textarea
+            name="json"
+            rows={6}
+            placeholder='{"chapters":[{"index":1,"title":"...","theme":"...","keywords":[{"term":"...","description":"...","referencePoints":"..."}]}]}'
+            className="textarea font-mono text-xs"
+          />
+        </div>
         <div className="flex items-center gap-2">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-          >
-            导入
+          <button type="submit" disabled={pending} className="btn btn-primary btn-sm">
+            导入内容
           </button>
-          {state?.error && <span className="text-xs text-danger-500">{state.error}</span>}
-          {state?.ok && <span className="text-xs text-success-500">已导入 ✓</span>}
+          {state?.error && <span className="field-error">{state.error}</span>}
+          {state?.ok && <span className="text-xs font-medium text-success-600">已导入 ✓</span>}
         </div>
       </form>
     </details>

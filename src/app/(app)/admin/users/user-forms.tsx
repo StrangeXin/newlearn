@@ -10,27 +10,44 @@ import {
 } from "@/app/actions/admin";
 
 const initial: AdminState = {};
-const inputClass =
-  "rounded-xl border border-brand-200 bg-white px-3 py-2 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200";
 
 export function AddUserForm() {
   const [state, action, pending] = useActionState(addUserAction, initial);
   return (
-    <form action={action} className="flex flex-wrap items-end gap-2">
-      <input name="name" required placeholder="姓名" className={inputClass} />
-      <select name="role" defaultValue="EMPLOYEE" className={inputClass}>
-        <option value="EMPLOYEE">员工</option>
-        <option value="ADMIN">管理员</option>
-      </select>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-      >
-        添加
-      </button>
-      {state?.error && <span className="text-sm text-danger-500">{state.error}</span>}
-      {state?.ok && <span className="text-sm text-success-500">已添加 ✓</span>}
+    <form action={action} className="space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <label htmlFor="add-user-name" className="field-label">
+            姓名
+          </label>
+          <input
+            id="add-user-name"
+            name="name"
+            required
+            placeholder="员工真实姓名"
+            className="input"
+          />
+        </div>
+        <div className="sm:w-28">
+          <label htmlFor="add-user-role" className="field-label">
+            角色
+          </label>
+          <select id="add-user-role" name="role" defaultValue="EMPLOYEE" className="select">
+            <option value="EMPLOYEE">员工</option>
+            <option value="ADMIN">管理员</option>
+          </select>
+        </div>
+        <button type="submit" disabled={pending} className="btn btn-primary shrink-0">
+          {pending ? "添加中…" : "添加"}
+        </button>
+      </div>
+      {state?.error ? (
+        <p className="field-error">{state.error}</p>
+      ) : state?.ok ? (
+        <p className="text-sm font-medium text-success-600">✓ 已添加，默认密码 Aa123456!</p>
+      ) : (
+        <p className="field-hint">姓名作为登录名，需唯一；新成员初始密码为 Aa123456!。</p>
+      )}
     </form>
   );
 }
@@ -38,23 +55,31 @@ export function AddUserForm() {
 export function ImportUsersForm() {
   const [state, action, pending] = useActionState(importUsersAction, initial);
   return (
-    <form action={action} className="space-y-2">
-      <textarea
-        name="names"
-        rows={4}
-        placeholder="批量导入：每行一个姓名"
-        className={`w-full ${inputClass}`}
-      />
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
-        >
-          批量导入
+    <form action={action} className="space-y-3">
+      <div>
+        <label htmlFor="import-names" className="field-label">
+          姓名列表
+        </label>
+        <textarea
+          id="import-names"
+          name="names"
+          rows={4}
+          placeholder={"每行一个姓名，例如：\n张伟\n李娜\n王芳"}
+          className="textarea min-h-28 font-mono"
+        />
+        <p className="field-hint mt-1.5">
+          支持换行、逗号分隔；与名单内重名的会自动跳过，全部按员工身份创建。
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" disabled={pending} className="btn btn-secondary">
+          {pending ? "导入中…" : "批量导入"}
         </button>
-        {state?.error && <span className="text-sm text-danger-500">{state.error}</span>}
-        {state?.ok && <span className="text-sm text-success-500">已导入 ✓</span>}
+        {state?.error ? (
+          <span className="field-error">{state.error}</span>
+        ) : state?.ok ? (
+          <span className="text-sm font-medium text-success-600">✓ 已导入，重名已跳过</span>
+        ) : null}
       </div>
     </form>
   );
@@ -71,33 +96,41 @@ export function UserRowActions({
 }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
+  const isError = msg.startsWith("✗");
   const run = (fn: () => Promise<AdminState>) =>
     start(async () => {
       setMsg("");
       const r = await fn();
-      setMsg(r.error ? `✗ ${r.error}` : "✓");
+      setMsg(r.error ? `✗ ${r.error}` : "✓ 已更新");
     });
 
   return (
-    <div className="flex items-center gap-2">
-      {msg && <span className="text-xs text-muted">{msg}</span>}
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {msg && (
+        <span className={`text-xs font-medium ${isError ? "text-danger-600" : "text-success-600"}`}>
+          {msg}
+        </span>
+      )}
       {canManageRole && (
         <select
+          aria-label="设置该成员的角色"
+          title="设置角色"
           defaultValue={role}
           disabled={pending}
           onChange={(e) => run(() => setRoleAction(userId, e.target.value))}
-          className="rounded-lg border border-brand-200 bg-white px-2 py-1 text-xs"
+          className="select w-auto px-2 py-1 text-xs"
         >
-          <option value="EMPLOYEE">员工</option>
-          <option value="ADMIN">管理员</option>
-          <option value="SUPERADMIN">超管</option>
+          <option value="EMPLOYEE">设为员工</option>
+          <option value="ADMIN">设为管理员</option>
+          <option value="SUPERADMIN">设为超管</option>
         </select>
       )}
       <button
         type="button"
         disabled={pending}
         onClick={() => run(() => resetPasswordAction(userId))}
-        className="rounded-lg border border-brand-200 px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-brand-50 disabled:opacity-50"
+        title="重置为默认密码 Aa123456!，下次登录强制改密"
+        className="btn btn-secondary btn-sm"
       >
         重置密码
       </button>

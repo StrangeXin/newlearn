@@ -8,18 +8,21 @@ export default async function ChangePasswordPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-5 py-12">
       <div className="w-full max-w-md animate-float-in">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-extrabold text-brand-700">
-            {forced ? "首次登录 · 请设置新密码" : "修改密码"}
+        <div className="mb-7 text-center">
+          {forced && (
+            <span className="badge badge-brand mb-3">首次登录</span>
+          )}
+          <h1 className="text-2xl font-bold text-ink">
+            {forced ? "设置你的专属密码" : "修改密码"}
           </h1>
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-3 text-sm leading-relaxed text-muted">
             {forced
-              ? "为了账号安全，请把默认密码改成只有你知道的密码。"
-              : "设置一个新的密码。"}
+              ? "默认密码全员相同，别人也能用它进你的账号。改成只有你知道的密码，这一步过后就能开始闯关。"
+              : "设置一个新密码，下次登录用它。"}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-brand-100 bg-white/90 p-6 shadow-xl shadow-brand-600/5">
+        <div className="card p-6 sm:p-7">
           <ChangePasswordForm forced={forced} />
         </div>
       </div>

@@ -19,30 +19,40 @@ export function ReflectForm({
     <form action={action} className="space-y-4">
       <input type="hidden" name="chapterId" value={chapterId} />
       <input type="hidden" name="chapterIndex" value={chapterIndex} />
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          共 {questions.length} 个问题，写你真实的想法，没有标准答案。
+        </p>
+        <span className="badge badge-brand shrink-0">结合岗位</span>
+      </div>
       {questions.map((q, i) => (
         <div key={i}>
-          <label className="block text-sm font-medium text-ink">
-            {i + 1}. {q}
+          <label className="field-label flex gap-2">
+            <span className="text-brand-700">{i + 1}.</span>
+            <span>{q}</span>
           </label>
           <textarea
             name="answer"
-            rows={3}
+            rows={4}
             required
-            placeholder="结合你的实际工作认真写"
-            className="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2.5 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+            placeholder="举一个你工作里能用上的具体例子，越具体越好"
+            className="textarea"
           />
         </div>
       ))}
       {state?.error && (
-        <p className="rounded-lg bg-danger-500/10 px-3 py-2 text-sm text-danger-500">{state.error}</p>
+        <p className="badge-danger rounded-lg px-3 py-2 text-sm font-medium" role="alert">
+          {state.error}
+        </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 disabled:opacity-60"
-      >
-        {pending ? "AI 正在总结…" : "提交反思，看总结"}
-      </button>
+      <div>
+        <button type="submit" disabled={pending} className="btn btn-primary btn-block btn-lg">
+          {pending ? "AI 正在读你的反思…" : "提交反思，生成本章小结"}
+        </button>
+        <p className="field-hint mt-2 text-center">
+          提交后 AI 会给出本章小结，并据此更新你的成长画像。
+        </p>
+      </div>
     </form>
   );
 }
