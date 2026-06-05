@@ -25,7 +25,7 @@ export default async function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink">员工名单</h1>
           <p className="mt-1 text-sm text-muted">
-            预导入名单，员工用「姓名 + 默认密码 Aa123456!」首次登录，登录后强制改密即算激活。
+            预导入名单，员工用「姓名 + 默认密码 Aa123456!」首次登录并改密即激活。
           </p>
         </div>
         <dl className="flex shrink-0 items-center gap-5 text-sm">
@@ -76,10 +76,9 @@ export default async function AdminUsersPage() {
         </div>
         {users.length === 0 ? (
           <div className="card flex flex-col items-center px-6 py-12 text-center">
-            <h3 className="text-base font-bold text-ink">名单还是空的</h3>
+            <h3 className="text-base font-bold text-ink">名单是空的</h3>
             <p className="mt-1.5 max-w-sm text-sm text-muted">
-              用上方「批量导入」粘贴员工姓名一次建好，或「添加单人」逐个录入。建好后把默认密码
-              Aa123456! 告诉员工即可。
+              用上方「批量导入」一次粘进姓名，或「添加单人」逐个录。
             </p>
           </div>
         ) : (

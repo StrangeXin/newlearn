@@ -42,8 +42,7 @@ export default async function AdminRankingsPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-extrabold text-ink">章节排名结算</h1>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">
-        完成该章全部 20 个关键词的员工才入排名，按 20 词最终分均值排序。前 3 名各得 +100
-        积分，并列名次同样各给 +100（不稀释、不限人数）。结算是一次性快照，重复点不会重复发奖。
+        完成本章全部 20 词的员工才入榜，按 20 词均分排序。前 3 名各得 +100，并列同样各给 +100（不稀释、不限人数）。结算一次性，重复点不会重复发奖。
       </p>
 
       <div className="mt-5 grid grid-cols-3 gap-3 sm:max-w-md">
@@ -87,8 +86,7 @@ export default async function AdminRankingsPage() {
               </div>
               {!settled ? (
                 <p className="px-5 py-6 text-sm leading-relaxed text-muted">
-                  还没有人完成本章全部 20 个关键词，暂无排名。等有人完成后，点右上角「结算本章排名」
-                  按均分排序并给前 3 名发放 +100 积分。
+                  还没人完成本章全部 20 词，暂无排名。
                 </p>
               ) : (
                 <>

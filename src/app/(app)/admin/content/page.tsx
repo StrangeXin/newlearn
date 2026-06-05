@@ -53,7 +53,7 @@ export default async function AdminContentPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-extrabold text-ink">学科与内容</h1>
       <p className="mt-1 text-sm text-muted">
-        新建学科后用 JSON 一次导入「5 章 + 100 词」，再逐词补全简介与参考考核要点。设为当前学科的内容，员工端才会闯关。
+        新建学科后用 JSON 一次导入「5 章 100 词」，再逐词补全简介与考核要点。设为当前学科后员工才能闯关。
       </p>
 
       <section className="mt-6">
@@ -70,7 +70,7 @@ export default async function AdminContentPage() {
           <div className="card flex flex-col items-center px-6 py-12 text-center">
             <span className="badge badge-muted">还没有学科</span>
             <p className="mt-3 max-w-sm text-sm text-muted">
-              在上方填一个学科名（如「人工智能」），新建后即可导入它的章节与关键词。
+              填一个学科名（如「人工智能」），新建后导入章节。
             </p>
           </div>
         ) : (
@@ -110,7 +110,7 @@ export default async function AdminContentPage() {
           <section className="card mt-6 p-4">
             <h2 className="text-lg font-bold text-ink">开课开始日</h2>
             <p className="field-hint mb-3 mt-0.5">
-              从这一天所在的自然周（周一至周日）起算，每周顺序解锁一章。
+              从这一天所在的自然周（周一到周日）起算，每周顺序解锁一章。
             </p>
             <StartDateForm value={toDateInput(activeSubject.startDate)} />
           </section>
@@ -123,7 +123,7 @@ export default async function AdminContentPage() {
               </span>
             </div>
             <p className="field-hint mb-4">
-              点开关键词填写简介与参考考核要点，简介对员工可见，考核要点只用于辅助 AI 打分。
+              点开关键词填简介与考核要点。简介对员工可见，考核要点只用来辅助 AI 打分。
             </p>
             <div className="space-y-6">
               {activeSubject.chapters.map((ch) => {

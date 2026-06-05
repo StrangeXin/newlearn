@@ -43,7 +43,7 @@ export default async function AdminRedemptionsPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink">兑换审批</h1>
           <p className="mt-1.5 text-sm text-muted">
-            员工申请的积分兑换在这里审批。通过后按 1 积分=1 元从其当前学科积分扣减，驳回不扣分。
+            1 积分 = 1 元。通过即扣分，驳回不扣。
           </p>
         </div>
         {pending.length > 0 && (
@@ -72,9 +72,6 @@ export default async function AdminRedemptionsPage() {
                 ✓
               </span>
               <p className="mt-2 text-sm font-medium text-ink">待审批已清空</p>
-              <p className="mt-1 max-w-xs text-xs text-muted">
-                员工在「兑换积分」提交申请后会排到这里，按提交先后处理。
-              </p>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -118,9 +115,6 @@ export default async function AdminRedemptionsPage() {
           {processed.length === 0 ? (
             <div className="card flex flex-col items-center px-6 py-10 text-center">
               <p className="text-sm font-medium text-ink">还没有处理记录</p>
-              <p className="mt-1 max-w-xs text-xs text-muted">
-                通过或驳回的申请会留在这里，最近 20 条可查，便于核对扣分。
-              </p>
             </div>
           ) : (
             <ul className="card divide-y divide-line overflow-hidden">

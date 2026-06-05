@@ -33,17 +33,17 @@ const NAV_ITEMS = [
   {
     href: "/admin/redemptions",
     title: "兑换审批",
-    desc: "审批员工的积分兑换申请，通过后扣减积分",
+    desc: "审批员工的积分兑换申请",
   },
   {
     href: "/admin/rankings",
     title: "章节排名结算",
-    desc: "结算每章前 3 名，各发 100 积分奖励",
+    desc: "结算每章前 3 名，各发 +100",
   },
   {
     href: "/admin/users",
     title: "员工名单",
-    desc: "导入名单、调整角色、重置登录密码",
+    desc: "导入名单、调角色、重置密码",
   },
   {
     href: "/admin/content",
@@ -53,7 +53,7 @@ const NAV_ITEMS = [
   {
     href: "/admin/stats",
     title: "数据统计",
-    desc: "查看学习进度、笔记质量与积分财务",
+    desc: "学习进度、笔记质量、积分财务",
   },
 ] as const;
 
@@ -130,7 +130,7 @@ export default async function AdminPage() {
               </span>
             </div>
             <p className="mt-1.5 text-xs text-muted">
-              自然周（周一至周日）顺序解锁，周日夜结算该周排名。下方按钮移动开始日，用于演示推进或回退进度。回退可能重新锁住已解锁的章。
+              自然周（周一到周日）顺序解锁，周日夜结算该周排名。下方按钮移动开始日；回退会重新锁住已解锁的关卡。
             </p>
           </div>
           <ScheduleControls />
@@ -138,9 +138,9 @@ export default async function AdminPage() {
       ) : (
         <div className="card mt-5 flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
-            <div className="font-bold text-ink">还没有开启学科</div>
+            <div className="font-bold text-ink">还没开课</div>
             <p className="mt-1.5 text-xs text-muted">
-              去「学科与内容」选择学科并设置开始日，员工才能开始本周的章节。
+              去「学科与内容」选学科并设开始日。
             </p>
           </div>
           <Link href="/admin/content" className="btn btn-primary btn-sm shrink-0">

@@ -14,7 +14,7 @@ export function ScheduleControls() {
         disabled={pending}
         onClick={() => shift(-1)}
         className="btn btn-danger btn-sm"
-        title="回退会把开始日往后推，可能重新锁住已解锁的关卡"
+        title="回退会重新锁住已解锁的关卡"
       >
         ← 回退一周
       </button>

@@ -42,8 +42,8 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
           className="input"
         />
         <ul className="field-hint mt-2 space-y-1">
-          <li>长度 8 到 72 位，至少各含一个字母和一个数字</li>
-          <li>不能再用默认密码，也不能和现在的密码一样</li>
+          <li>8–72 位，至少 1 个字母 + 1 个数字</li>
+          <li>不能是默认密码，也不能和现在的一样</li>
         </ul>
       </div>
 

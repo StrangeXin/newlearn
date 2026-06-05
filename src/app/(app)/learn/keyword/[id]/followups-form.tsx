@@ -30,7 +30,7 @@ export function FollowupsForm({
             name="answer"
             rows={3}
             required
-            placeholder="结合你的工作具体作答"
+            placeholder="结合你的工作写具体一点"
             className="textarea mt-1"
           />
         </div>

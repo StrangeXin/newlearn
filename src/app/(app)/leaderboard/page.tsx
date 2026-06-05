@@ -33,7 +33,7 @@ export default async function LeaderboardPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">排行榜</h1>
           <p className="mt-1.5 text-muted">
-            {cfg.activeSubject?.title} · 积分可兑换书籍和工具，每章前 3 名另奖 100 分。
+            {cfg.activeSubject?.title} · 1 积分 = 1 元，每章前 3 名另奖 100。
           </p>
         </div>
         {myRow ? (
@@ -48,7 +48,7 @@ export default async function LeaderboardPage() {
         ) : (
           <div className="rounded-xl border border-line bg-surface px-4 py-2.5 text-center">
             <div className="text-sm font-bold text-ink">你还没上榜</div>
-            <div className="text-xs text-muted">完成一整章即可入榜</div>
+            <div className="text-xs text-muted">完成一章即可入榜</div>
           </div>
         )}
       </div>
@@ -65,7 +65,7 @@ export default async function LeaderboardPage() {
             </span>
             <h3 className="mt-5 text-lg font-bold text-ink">还没有人上榜</h3>
             <p className="mt-2 max-w-md text-sm text-muted">
-              完成一整章 20 个关键词即可进入排名，每章前 3 名另奖 100 积分。
+              完成一章全部 20 个关键词即可入榜。
             </p>
             <Link href="/learn" className="btn btn-primary mt-6">
               去闯关 →
@@ -126,7 +126,7 @@ export default async function LeaderboardPage() {
             </span>
             <h3 className="mt-5 text-lg font-bold text-ink">还没有章节结算</h3>
             <p className="mt-2 max-w-md text-sm text-muted">
-              每周日结算当周章节，按 20 个关键词的平均分取前 3 名，各奖 100 积分。
+              每周日结算当周前 3 名，各奖 100 积分。
             </p>
           </div>
         ) : (

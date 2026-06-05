@@ -69,7 +69,7 @@ export default async function AdminStatsPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-bold text-ink">数据统计</h1>
       <p className="mt-1 text-sm text-muted">
-        学科：{cfg.activeSubject?.title} · 当前第 <span className="tabular-nums">{week}</span> 周 ·
+        学科：{cfg.activeSubject?.title} · 第 <span className="tabular-nums">{week}</span> 周 ·
         全员 <span className="tabular-nums">{progress.rows.length}</span> 人，已开始{" "}
         <span className="tabular-nums">{startedCount}</span> 人
       </p>
@@ -78,7 +78,7 @@ export default async function AdminStatsPage() {
       <section className="mt-8">
         <SectionHead
           title="积分与兑换"
-          hint="1 积分按 1 元兑换报销额度。在册余额是已发放减去已兑现的部分，待审批是员工已申请、等你处理的金额。"
+          hint="1 积分 = 1 元报销。在册余额 = 已发 − 已兑；待审批是员工已申请、等你处理的。"
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="累计发放积分" value={finance.issued} gold />
@@ -108,7 +108,7 @@ export default async function AdminStatsPage() {
       <section className="mt-8">
         <SectionHead
           title="分数质量"
-          hint="只统计已通过（终评 ≥60）的词次。分数分布看大盘水平，最难关键词帮你定位哪些词需要补充资料或讲解。"
+          hint="只看已通过（终评 ≥60）的词次。分数分布看大盘水平，最难关键词帮定位哪些词需要补资料。"
         />
         <div className="grid grid-cols-2 gap-3 sm:max-w-md">
           <Stat label="平均最终分" value={quality.avgScore} sub="已通过词次的均分" />
@@ -125,7 +125,7 @@ export default async function AdminStatsPage() {
             </div>
             {totalDist === 0 ? (
               <p className="py-4 text-sm leading-relaxed text-muted">
-                还没有人通过任何关键词。等员工开始提交笔记并拿到 ≥60 分，分布会在这里成形。
+                还没人通过任何关键词。
               </p>
             ) : (
               <div className="space-y-2.5">
@@ -148,7 +148,7 @@ export default async function AdminStatsPage() {
             <h3 className="mb-3 text-sm font-semibold text-ink">最难的关键词</h3>
             {quality.hardest.length === 0 ? (
               <p className="py-4 text-sm leading-relaxed text-muted">
-                暂无足够数据。等多名员工提交同一批关键词后，这里会列出平均分最低的几个词。
+                暂无足够数据。
               </p>
             ) : (
               <ul className="divide-y divide-line">
@@ -178,9 +178,9 @@ export default async function AdminStatsPage() {
         />
         {progress.rows.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-sm font-medium text-ink">还没有员工开始学习</p>
+            <p className="text-sm font-medium text-ink">还没人开始学习</p>
             <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-muted">
-              先到「员工名单」导入员工并发放白名单账号，他们登录并完成第一个关键词后，进度会在这里逐人展开。
+              先到「员工名单」导入员工，进度会在他们通过第一个关键词后出现。
             </p>
             <Link href="/admin/users" className="btn btn-secondary btn-sm mt-4">
               去管理员工名单

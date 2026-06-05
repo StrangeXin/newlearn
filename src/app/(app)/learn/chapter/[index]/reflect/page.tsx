@@ -46,7 +46,7 @@ export default async function ReflectPage({
           </span>
           <h1 className="mt-5 text-2xl font-extrabold text-ink">章节反思还没解锁</h1>
           <p className="mt-2 max-w-sm leading-relaxed text-muted">
-            通关《{chapter.title}》的全部 20 个关键词后，这里会出现一组结合你岗位的反思问题，帮你把本章所学落到日常工作里。
+            通关《{chapter.title}》全部 20 个关键词后，会出现一组结合你岗位的反思题。
           </p>
           <Link href={`/learn/chapter/${chapter.index}`} className="btn btn-primary mt-6">
             回到本章继续闯关
@@ -79,7 +79,7 @@ export default async function ReflectPage({
           </div>
           <h1 className="mt-0.5 text-2xl font-extrabold text-ink">{chapter.title}</h1>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            20 个关键词已全部通关。趁记忆还热，把本章所学接到你手上的具体工作上：回答下面几个结合岗位的问题，AI 会据此更新你的成长画像。
+            20 个关键词已通关。结合你岗位回答下面几题，提交后会给一份本章小结。
           </p>
         </div>
       </div>
@@ -113,9 +113,9 @@ export default async function ReflectPage({
 
           <div className="panel mt-6 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <div>
-              <div className="font-bold text-ink">画像已据这次反思更新</div>
+              <div className="font-bold text-ink">画像已根据这次反思更新</div>
               <p className="mt-0.5 text-sm text-muted">
-                去成长轨迹看 AI 对你的最新理解，以及和上一次相比变了哪些。
+                去成长轨迹看最新画像。
               </p>
             </div>
             <Link href="/growth" className="btn btn-primary btn-sm shrink-0">

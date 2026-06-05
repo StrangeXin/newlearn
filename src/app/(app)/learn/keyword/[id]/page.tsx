@@ -84,11 +84,11 @@ export default async function KeywordPage({
         {step === "note" && (
           <>
             <h2 className="mb-3 font-bold text-ink">
-              {progress ? "再写一版，刷新更高分" : "写下你的学习笔记"}
+              {progress ? "再写一版，刷个更高分" : "写下你的学习笔记"}
             </h2>
             {progress && (
               <p className="mb-3 text-sm text-muted">
-                当前最高 {progress.bestFinalScore} 分，多次提交只取最高分。
+                目前最高 {progress.bestFinalScore} 分，多次提交只取最高分。
               </p>
             )}
             <NoteForm keywordId={id} />
@@ -101,7 +101,7 @@ export default async function KeywordPage({
               <span className="badge badge-brand px-3 py-1 text-sm">
                 初评 {latest.scoring.initialScore} 分
               </span>
-              <span className="text-sm text-muted">回答下面的追问，得出最终评分</span>
+              <span className="text-sm text-muted">回答下面的追问，看最终分</span>
             </div>
             <FollowupsForm
               submissionId={latest.id}
@@ -119,8 +119,8 @@ export default async function KeywordPage({
               {latest.isPassed
                 ? progress?.bestFinalScore === latest.finalScore
                   ? "已通过，获得 1 积分"
-                  : `已通过。本次未超过最高分 ${progress?.bestFinalScore}，积分此前已计入`
-                : `未达 ${PASS_THRESHOLD} 分，可修改后重新提交，只取最高分`}
+                  : `已通过。本次没超过历史最高 ${progress?.bestFinalScore}，积分之前已计过`
+                : `未达 ${PASS_THRESHOLD} 分，改完可以再交，只取最高分`}
             </p>
             {latest.scoring.feedback && (
               <p className="mx-auto mt-4 max-w-prose rounded-xl bg-brand-50 p-3.5 text-left text-sm leading-relaxed text-ink">
@@ -134,14 +134,14 @@ export default async function KeywordPage({
               </p>
             )}
             <p className="mt-3 text-xs text-muted">
-              已根据本次作答更新你的画像 ·{" "}
+              画像已根据本次作答更新 ·{" "}
               <Link href="/growth" className="font-medium text-brand-700 underline underline-offset-2">
                 看成长轨迹
               </Link>
             </p>
             <div className="mt-5 flex justify-center gap-3">
               <Link href={`/learn/keyword/${id}?new=1`} className="btn btn-secondary">
-                再来一次
+                再来一版
               </Link>
               <Link href={backHref} className="btn btn-primary">
                 返回章节
@@ -153,9 +153,9 @@ export default async function KeywordPage({
 
       {peerNotes && peerNotes.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-bold text-ink">看看别人怎么写的</h2>
+          <h2 className="font-bold text-ink">同事怎么写的</h2>
           <p className="mb-3 mt-1 text-xs text-muted">
-            完成本词后已解锁，按得分高低排列，可参考同事的写法。
+            完成本词后可见，按得分高低排列。
           </p>
           <ul className="space-y-2.5">
             {peerNotes.map((p, i) => (

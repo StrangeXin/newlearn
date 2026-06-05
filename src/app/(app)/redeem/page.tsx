@@ -51,7 +51,7 @@ export default async function RedeemPage() {
       <div className="animate-float-in">
         <h1 className="text-2xl font-extrabold text-ink">积分兑换</h1>
         <p className="mt-1 text-sm text-muted">
-          1 积分兑换 1 元报销额度，可分多次兑换书籍或工具。
+          1 积分 = 1 元，可多次兑换书或工具。
         </p>
       </div>
 
@@ -66,7 +66,7 @@ export default async function RedeemPage() {
           </div>
           <p className="mt-1 text-sm text-ink">
             约合 <span className="font-semibold">{available} 元</span>{" "}
-            报销额度，现在就能提交申请。
+            报销额度。
           </p>
         </div>
         <dl className="mt-4 flex gap-6 sm:mt-0 sm:shrink-0">
@@ -84,7 +84,7 @@ export default async function RedeemPage() {
       <section className="card mt-6 p-6">
         <h2 className="font-bold text-ink">发起兑换</h2>
         <p className="mb-4 mt-1 text-sm text-muted">
-          提交后由管理员审批，通过后扣减积分；审批期间该金额暂被冻结。
+          提交后由管理员审批。审批期间金额冻结，通过后扣分。
         </p>
         <RedeemForm available={available} />
       </section>
@@ -103,7 +103,7 @@ export default async function RedeemPage() {
           <div className="card p-8 text-center">
             <p className="text-sm font-semibold text-ink">还没有兑换记录</p>
             <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted">
-              用上面的表单把积分换成想要的书籍或工具，提交后管理员审批通过即可到账，每笔申请的进度都会列在这里。
+              上方表单提交后，每笔进度会列在这里。
             </p>
           </div>
         ) : (

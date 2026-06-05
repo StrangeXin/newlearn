@@ -17,8 +17,8 @@ export default async function ChangePasswordPage() {
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             {forced
-              ? "默认密码全员相同，别人也能用它进你的账号。改成只有你知道的密码，这一步过后就能开始闯关。"
-              : "设置一个新密码，下次登录用它。"}
+              ? "默认密码是全员共享的。改一个只有你知道的，改完就能开始闯关。"
+              : "换个新密码，下次用它登录。"}
           </p>
         </div>
 

@@ -92,7 +92,7 @@ export default async function LearnPage() {
               )}
             </p>
           ) : (
-            <p className="mt-2 text-muted">管理员还没有开启任何学科，请稍候。</p>
+            <p className="mt-2 text-muted">管理员还没开课，耐心等一下。</p>
           )}
         </div>
         {subject && (
@@ -160,8 +160,8 @@ export default async function LearnPage() {
             <h2 className="text-lg font-bold text-ink">已解锁关卡全部完成</h2>
             <p className="mt-1 text-sm text-muted">
               {nextLockedIndex
-                ? `下周一解锁第 ${nextLockedIndex} 关，可先查看排行榜或成长轨迹。`
-                : "已完成全部 5 关，可在排行榜查看排名。"}
+                ? `下周一解锁第 ${nextLockedIndex} 关。可以先看排行榜或成长轨迹。`
+                : "5 关都过了，去排行榜看看。"}
             </p>
           </div>
           <div className="flex shrink-0 gap-2">

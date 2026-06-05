@@ -38,15 +38,14 @@ export default async function ProfilePage() {
       <div className="animate-float-in">
         <h1 className="text-2xl font-bold text-ink">我的资料</h1>
         <p className="mt-1.5 max-w-prose leading-relaxed text-muted">
-          这里有两部分：上面是你填的基本资料，AI 用它来调整追问的角度；下面是 AI
-          边批改边写下的画像，只读，会越来越懂你。
+          上半是你填的基本资料，决定追问怎么问；下半是系统按你的作答写的画像，只读。
         </p>
       </div>
 
       <section className="card mt-6 p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold text-ink">基本资料</h2>
-          <span className="text-xs text-muted">改了即时生效，下次追问就会参考</span>
+          <span className="text-xs text-muted">改了即时生效</span>
         </div>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           换了岗位或想把 AI 用在新场景，随时来改。
@@ -67,13 +66,13 @@ export default async function ProfilePage() {
 
       <section className="panel mt-6 p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold text-ink">AI 对你的画像</h2>
+          <h2 className="text-lg font-semibold text-ink">画像</h2>
           <span className="badge badge-muted">系统维护 · 只读</span>
         </div>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           {hasPortrait
-            ? `已根据你的 ${memory.updateCount} 个关键词作答整理出来，每通过一个词就会更新一次。`
-            : "提交并通过关键词后，AI 会从你的作答里提炼这张画像。"}
+            ? `已根据 ${memory.updateCount} 次作答整理。`
+            : "通过关键词后，会从你的作答里提炼这张画像。"}
         </p>
 
         {hasPortrait ? (
@@ -92,7 +91,7 @@ export default async function ProfilePage() {
             </div>
             <details className="rounded-xl border border-line bg-surface">
               <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-brand-700">
-                展开完整画像
+                展开画像全文
               </summary>
               <pre className="whitespace-pre-wrap border-t border-line px-3 py-3 font-mono text-xs leading-relaxed text-ink">
                 {memory.portrait}
@@ -101,14 +100,14 @@ export default async function ProfilePage() {
             <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
               <span className="text-xs text-muted">想看它一步步变清晰的过程？</span>
               <Link href="/growth" className="btn btn-secondary btn-sm shrink-0">
-                成长轨迹 →
+                看成长轨迹 →
               </Link>
             </div>
           </div>
         ) : (
           <div className="mt-5 rounded-xl border border-line bg-surface px-5 py-8 text-center">
             <p className="mx-auto max-w-sm leading-relaxed text-muted">
-              答完第一个关键词，这里就会出现你的第一张画像，之后每答一词都会更新。
+              通过第一个关键词后，画像就会出现在这里。
             </p>
             <Link href="/learn" className="btn btn-primary mt-4">
               去闯关 →

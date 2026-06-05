@@ -106,8 +106,7 @@ export default async function GrowthPage() {
       <div className="animate-float-in">
         <h1 className="text-2xl font-bold text-ink">成长轨迹</h1>
         <p className="mt-1.5 max-w-prose leading-relaxed text-muted">
-          每通过一个关键词，AI 都会重写一次它对你的画像。这里按时间倒推每一次更新，
-          看得到它从哪句话开始懂你、又是怎么一步步变准的。
+          每通过一个关键词，画像会重写一次。下面按时间倒序展示每次的改动。
         </p>
       </div>
 
@@ -116,10 +115,9 @@ export default async function GrowthPage() {
           <span className="map-node map-node-open mb-4 h-14 w-14 text-2xl" aria-hidden>
             1
           </span>
-          <h2 className="text-xl font-bold text-ink">第一张画像还没写出来</h2>
+          <h2 className="text-xl font-bold text-ink">还没有画像</h2>
           <p className="mt-2 max-w-sm leading-relaxed text-muted">
-            提交并通过第一个关键词后，AI 会落下对你的第一笔画像；从第二个词起，
-            这里每条记录都会标出「这次它多懂了你什么」。
+            通过第一个关键词后会落下一笔记录；从第二个词起，每条记录会标出这次多了哪些标签。
           </p>
           <Link href="/learn" className="btn btn-primary mt-6">
             去闯关 →
@@ -130,7 +128,7 @@ export default async function GrowthPage() {
           {/* 当前画像概览：标签 chips + 完整摘要可展开 */}
           <section className="card mt-6 p-5 sm:p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold text-ink">此刻的你（AI 视角）</h2>
+              <h2 className="text-lg font-semibold text-ink">当前画像</h2>
               <span className="badge badge-brand">已更新 {memory?.updateCount ?? 0} 次</span>
             </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -149,7 +147,7 @@ export default async function GrowthPage() {
             </div>
             <details className="mt-5 rounded-xl border border-line bg-surface-2">
               <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-brand-700">
-                展开 AI 写的完整画像
+                展开画像全文
               </summary>
               <pre className="whitespace-pre-wrap border-t border-line px-3 py-3 font-mono text-xs leading-relaxed text-ink">
                 {memory?.portrait || "画像正文会随你作答逐步补全。"}
@@ -159,7 +157,7 @@ export default async function GrowthPage() {
 
           {/* 时间线：每次更新的 git 风格 diff */}
           <h2 className="mt-9 text-sm font-semibold text-muted">
-            画像演进 · 共 {snapshots.length} 次
+            画像变更 · 共 {snapshots.length} 次
           </h2>
           <ol className="relative mt-4 border-l-2 border-line pl-6">
             {[...snapshots].reverse().map((s) => {
@@ -206,7 +204,7 @@ export default async function GrowthPage() {
                     {(d.portraitChanged || hasAdds) && (
                       <details className="mt-3">
                         <summary className="cursor-pointer text-xs font-semibold text-brand-700">
-                          逐行看画像改了哪里
+                          看画像改了哪几行
                         </summary>
                         <GitDiff lines={diffLines} />
                       </details>

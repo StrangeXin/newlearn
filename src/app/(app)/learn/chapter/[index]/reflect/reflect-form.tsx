@@ -35,7 +35,7 @@ export function ReflectForm({
             name="answer"
             rows={4}
             required
-            placeholder="举一个你工作里能用上的具体例子，越具体越好"
+            placeholder="举一个你工作里能用上的具体例子"
             className="textarea"
           />
         </div>

@@ -25,7 +25,7 @@ const method = [
 // 一个关键词的微循环（产品玩法）
 const steps = [
   { n: 1, title: "看关键词", desc: "每章 20 个核心词，从起源串到前沿，每周一章。" },
-  { n: 2, title: "写笔记", desc: "外部检索后，用自己的话写 100–5000 字，写明白才算数。" },
+  { n: 2, title: "写笔记", desc: "检索后用自己的话写 100–5000 字，写明白才算数。" },
   { n: 3, title: "AI 打分追问", desc: "大模型 AI 打 1–100 分，按你的薄弱点追问 1–3 题。" },
   { n: 4, title: "拿积分", desc: "终评 ≥60 得 1 分；没到也能无限重写，系统取最高分。" },
 ];
@@ -66,8 +66,7 @@ export default function Home() {
             <span className="mt-1 block text-brand-600">读懂一个新领域</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:mx-0">
-            一个行业的来龙去脉，浓缩成 100 个关键词，每周学一章。你检索、写笔记，大模型 AI
-            当场打分、按薄弱点追问；达标即得积分，凭积分兑换书籍和工具。
+            一门学科浓缩成 100 个关键词，每周学一章。检索、写笔记，大模型 AI 当场打分、追问薄弱点；达标得积分，可兑换书和工具。
           </p>
           <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
             <Link href="/login" className="btn btn-primary btn-lg btn-block sm:w-auto">
@@ -78,7 +77,7 @@ export default function Home() {
             </a>
           </div>
           <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted lg:justify-start">
-            {["5 章 100 词", "AI 打分 + 追问", "每章前三 +100"].map((t) => (
+            {["5 章 100 词", "AI 打分追问", "每章前三 +100"].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
                 <span className="text-brand-600" aria-hidden>
                   ✓
@@ -138,7 +137,7 @@ export default function Home() {
             麦肯锡进入一个陌生行业，先做三件事
           </h2>
           <p className="mt-3 leading-relaxed text-muted">
-            其中第一件，就是总结出这个行业最核心的 100 个关键词。这三件事，我们都做进了每周的学习。
+            其中第一步，就是找出这行业最核心的 100 个关键词。我们把三件事都做进了每周的学习。
           </p>
         </div>
         <ol className="mt-10 grid gap-5 lg:grid-cols-3">
@@ -162,7 +161,7 @@ export default function Home() {
       <section id="how" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 lg:py-24">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold text-ink sm:text-3xl">一个关键词，四步通关</h2>
-          <p className="mt-3 text-muted">每个关键词都是一次小闯关，写得越透，分越高。</p>
+          <p className="mt-3 text-muted">写得越透，分越高。</p>
         </div>
         <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
@@ -202,7 +201,7 @@ export default function Home() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold text-ink sm:text-3xl">现在能学什么</h2>
           <p className="mt-3 leading-relaxed text-muted">
-            每个学科都是 5 章 100 词，从起源排到前沿。需要哪个领域，开一门就能学。
+            每个学科都是 5 章 100 词，从起源到前沿。开哪门学哪门。
           </p>
         </div>
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
@@ -213,7 +212,7 @@ export default function Home() {
               <span className="badge badge-success shrink-0">已开课</span>
             </div>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              从图灵机到大模型 Agent，把 AI 这几十年的来路完整走一遍。
+              从图灵机到大模型 Agent，AI 这几十年的脉络完整走一遍。
             </p>
             <ol className="mt-4 space-y-2.5">
               {aiChapters.map((c, i) => (
@@ -246,7 +245,7 @@ export default function Home() {
             <div className="card flex flex-1 flex-col justify-center border-dashed p-6">
               <h3 className="text-lg font-bold text-ink">更多主题</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                心理学、医学、管理…… 任何能拆成 100 个关键词的领域，都能开成一门新课。
+                心理学、医学、管理…… 任何能拆成 100 个关键词的领域，都能开成一门课。
               </p>
             </div>
           </div>
@@ -256,9 +255,9 @@ export default function Home() {
       {/* 收尾 CTA */}
       <section className="mx-auto max-w-6xl px-5 pb-16 pt-4">
         <div className="panel flex flex-col items-center gap-4 rounded-2xl px-6 py-10 text-center">
-          <h2 className="text-2xl font-bold text-ink">第 1 关已经解锁</h2>
+          <h2 className="text-2xl font-bold text-ink">第 1 关已解锁</h2>
           <p className="max-w-md text-muted">
-            用姓名和默认密码登录即可激活账号，首次登录改个密码就能开始。
+            姓名 + 默认密码登录后改个密码，就开闯。
           </p>
           <Link href="/login" className="btn btn-primary btn-lg">
             开始闯关 →

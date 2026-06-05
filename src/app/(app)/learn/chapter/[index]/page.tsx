@@ -45,7 +45,7 @@ export default async function ChapterPage({
           </span>
           <h1 className="mt-5 text-2xl font-extrabold text-ink">第 {chapter.index} 关尚未开放</h1>
           <p className="mt-2 max-w-sm text-muted">
-            每周开放一关，第 {chapter.index} 周才解锁本关。先把已开放的关卡通关，攒积分、冲排名。
+            每周开放一关，第 {chapter.index} 周才解锁。先把已开放的关卡通关。
           </p>
           <Link href="/learn" className="btn btn-primary mt-6">
             回到闯关地图
@@ -132,10 +132,10 @@ export default async function ChapterPage({
               🧩
             </span>
             <div>
-              <div className="font-bold text-ink">本关已通关，来做章节反思</div>
-              <div className="mt-0.5 text-xs text-muted">
-                结合你的岗位，把本章所学落到实际工作中
-              </div>
+              <div className="font-bold text-ink">本章 20 词已通关，做个章节反思</div>
+            <div className="mt-0.5 text-xs text-muted">
+              结合你的岗位，把本章所学落到实际工作里
+            </div>
             </div>
           </div>
           <span className="btn btn-primary btn-sm shrink-0">

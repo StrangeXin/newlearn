@@ -72,20 +72,20 @@ export function KeywordEditor({
       <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="keywordId" value={keywordId} />
         <div>
-          <label className="field-label">简介</label>
-          <p className="field-hint mb-1">员工在关键词页能看到，一两句话说清这个词指什么。</p>
-          <textarea name="description" rows={2} defaultValue={description} className="textarea" />
-        </div>
-        <div>
-          <label className="field-label">参考考核要点</label>
-          <p className="field-hint mb-1">只用于辅助 AI 打分，员工看不到。多个要点用分号分隔。</p>
-          <textarea
-            name="referencePoints"
-            rows={2}
-            defaultValue={referencePoints}
-            className="textarea"
-          />
-        </div>
+        <label className="field-label">简介</label>
+        <p className="field-hint mb-1">员工可见，一两句话讲清这个词指什么。</p>
+        <textarea name="description" rows={2} defaultValue={description} className="textarea" />
+      </div>
+      <div>
+        <label className="field-label">参考考核要点</label>
+        <p className="field-hint mb-1">员工看不到；多个要点用分号分隔。</p>
+        <textarea
+          name="referencePoints"
+          rows={2}
+          defaultValue={referencePoints}
+          className="textarea"
+        />
+      </div>
         <div className="flex items-center gap-2">
           <button type="submit" disabled={pending} className="btn btn-primary btn-sm">
             保存
@@ -107,7 +107,7 @@ export function CreateSubjectForm() {
         <input
           name="title"
           required
-          placeholder="学科名称，如「人工智能」「医学」「心理学」"
+          placeholder="学科名，如「人工智能」「医学」"
           className="input flex-1"
         />
         <button type="submit" disabled={pending} className="btn btn-primary">

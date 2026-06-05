@@ -46,7 +46,7 @@ export function AddUserForm() {
       ) : state?.ok ? (
         <p className="text-sm font-medium text-success-600">✓ 已添加，默认密码 Aa123456!</p>
       ) : (
-        <p className="field-hint">姓名作为登录名，需唯一；新成员初始密码为 Aa123456!。</p>
+        <p className="field-hint">姓名须唯一；初始密码 Aa123456!。</p>
       )}
     </form>
   );
@@ -68,7 +68,7 @@ export function ImportUsersForm() {
           className="textarea min-h-28 font-mono"
         />
         <p className="field-hint mt-1.5">
-          支持换行、逗号分隔；与名单内重名的会自动跳过，全部按员工身份创建。
+          换行或逗号都行；重名自动跳过，全部按员工身份创建。
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

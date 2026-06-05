@@ -64,7 +64,6 @@ export function ProfileEditForm({ values }: { values: ProfileValues }) {
           defaultValue={values.background}
           className="textarea min-h-0"
         />
-        <p className="field-hint mt-1">学过什么专业、做过哪些领域，AI 会据此调整例子的深浅。</p>
       </div>
       <div>
         <label className="field-label">最想把 AI 用在哪些工作</label>
@@ -75,7 +74,7 @@ export function ProfileEditForm({ values }: { values: ProfileValues }) {
           defaultValue={values.applicationAreas}
           className="textarea min-h-0"
         />
-        <p className="field-hint mt-1">越具体越好，比如「帮我写周报、整理客户反馈」，追问会往这上面靠。</p>
+        <p className="field-hint mt-1">越具体越好，比如「帮我写周报、整理客户反馈」。</p>
       </div>
 
       {state?.error && (

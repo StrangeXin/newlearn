@@ -23,7 +23,7 @@ export function NoteForm({ keywordId }: { keywordId: string }) {
         rows={12}
         aria-label="学习笔记"
         onChange={(e) => setLen(e.target.value.trim().length)}
-        placeholder="去外面检索、阅读后，用自己的话把这个关键词总结清楚（100–5000 字）。写出原理、机制、例子和你的理解。"
+        placeholder="检索后用自己的话总结（100–5000 字）。原理、机制、例子，写明白才算数。"
         className="textarea"
       />
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

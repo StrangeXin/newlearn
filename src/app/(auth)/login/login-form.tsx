@@ -39,8 +39,8 @@ export function LoginForm() {
           className="input"
         />
         <p className="field-hint mt-1.5">
-          还没改过密码？默认密码是{" "}
-          <span className="badge badge-muted font-mono">Aa123456!</span>
+          默认密码 <span className="badge badge-muted font-mono">Aa123456!</span>{" "}
+          （首登后须改密）
         </p>
       </div>
 
