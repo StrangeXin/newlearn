@@ -139,7 +139,7 @@ export default async function AdminContentPage() {
                         {filled}/{ch.keywords.length} 词已补全
                       </span>
                     </div>
-                    <div className="grid gap-1.5 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
                       {ch.keywords.map((kw) => (
                         <KeywordEditor
                           key={kw.id}

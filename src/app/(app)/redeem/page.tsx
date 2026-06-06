@@ -16,8 +16,8 @@ const statusLabel: Record<string, { text: string; cls: string }> = {
 
 export default async function RedeemPage() {
   const user = await requireUser();
-  if (user.role !== "EMPLOYEE") redirect("/admin");
 
+  // 任何角色都可参与学习与兑换；无资料先去 onboarding
   const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
   if (!profile) redirect("/onboarding");
 

@@ -55,6 +55,11 @@ const NAV_ITEMS = [
     title: "数据统计",
     desc: "学习进度、笔记质量、积分财务",
   },
+  {
+    href: "/admin/ai-logs",
+    title: "AI 调用记录",
+    desc: "审查每次 AI 打分的上下文与过程",
+  },
 ] as const;
 
 export default async function AdminPage() {

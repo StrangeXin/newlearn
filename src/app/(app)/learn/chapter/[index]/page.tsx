@@ -147,7 +147,7 @@ export default async function ChapterPage({
       <h2 className="mt-7 text-sm font-semibold text-muted">
         本关 {chapter.keywords.length} 个关键词
       </h2>
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {chapter.keywords.map((kw, i) => {
           const p = byKeyword.get(kw.id);
           const status = p?.isCompleted ? "done" : p ? "doing" : "todo";
@@ -172,7 +172,7 @@ export default async function ChapterPage({
                 >
                   {status === "done" ? "✓" : i + 1}
                 </span>
-                <span className="flex-1 truncate text-sm font-medium text-ink">{kw.term}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{kw.term}</span>
                 {status === "done" ? (
                   <span className="badge badge-success shrink-0">{p!.bestFinalScore} 分</span>
                 ) : status === "doing" ? (

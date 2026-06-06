@@ -14,6 +14,7 @@
 // ===========================================================================
 
 import {
+  AnswerQuestionInput,
   EMPTY_TAGS,
   FinalizeInput,
   FinalizeResult,
@@ -257,6 +258,18 @@ export class MockScoringService implements ScoringService {
     const portrait =
       `${prevPortrait}\n\n## 《${input.chapterTitle}》章节反思\n- ${summary}`.trim();
     return { summary, portrait };
+  }
+
+  async answerQuestion(input: AnswerQuestionInput): Promise<{ answer: string }> {
+    const term = input.keyword.term;
+    const pos = input.learner?.profile?.position ?? "你的岗位";
+    const q = input.question.trim();
+    const shown = q.slice(0, 40) + (q.length > 40 ? "…" : "");
+    const answer =
+      `关于「${term}」，针对你的问题「${shown}」：` +
+      `可以从核心原理、一个典型例子，以及它在「${pos}」工作中的应用三层来理解。` +
+      `结合你这次的笔记，建议再补一个具体场景，把概念落到能动手的程度。`;
+    return { answer };
   }
 }
 

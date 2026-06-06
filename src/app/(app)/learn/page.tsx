@@ -46,6 +46,11 @@ export default async function LearnPage() {
   const doneMap = new Map(completedByChapter.map((c) => [c.chapterId, c._count._all]));
   const totalDone = completedByChapter.reduce((s, c) => s + c._count._all, 0);
   const totalPoints = points._sum.amount ?? 0;
+  const portraitUpdates =
+    (await prisma.employeeMemory.findUnique({
+      where: { userId: user.id },
+      select: { updateCount: true },
+    }))?.updateCount ?? 0;
   const schedule = getScheduleInfo(subject ?? null);
 
   // 章节状态 + 聚焦（本周任务 / 补做 / 全通关）
@@ -96,7 +101,7 @@ export default async function LearnPage() {
           )}
         </div>
         {subject && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <div className="rounded-xl border border-line bg-brand-50 px-4 py-2.5 text-center">
               <div className="text-2xl font-extrabold tabular-nums text-brand-700">
                 {totalDone}
@@ -114,6 +119,18 @@ export default async function LearnPage() {
               </div>
               <div className="text-xs font-medium text-accent-700">积分 · 去兑换</div>
             </Link>
+            {portraitUpdates > 0 && (
+              <Link
+                href="/growth"
+                className="rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-center transition hover:brightness-[0.97]"
+              >
+                <div className="flex items-center justify-center gap-1 text-2xl font-extrabold tabular-nums text-brand-700">
+                  <span aria-hidden>📈</span>
+                  {portraitUpdates}
+                </div>
+                <div className="text-xs font-medium text-muted">画像更新 · 看轨迹</div>
+              </Link>
+            )}
           </div>
         )}
       </div>

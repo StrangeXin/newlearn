@@ -49,6 +49,23 @@ export function diffHasChanges(d: MemoryDiff): boolean {
 const strArr = (x: unknown): string[] =>
   Array.isArray(x) ? x.map((i) => String(i)).filter((s) => s.trim()) : [];
 
+/**
+ * 同伴正向公开用：从画像 Markdown 里剔除「待加强 / 盲区」小节（含其下正文，直到下一个标题），
+ * 保留强项 / 兴趣 / 与岗位结合 / 最近进展等。用于在排行榜上看他人成长而不暴露其短板。
+ */
+export function stripSensitivePortrait(portrait: string): string {
+  if (!portrait.trim()) return "";
+  const isHeading = (l: string) => /^#{1,6}\s/.test(l);
+  const isSensitive = (l: string) => /^#{1,6}\s*.*(待加强|盲区)/.test(l);
+  const out: string[] = [];
+  let skipping = false;
+  for (const line of portrait.split("\n")) {
+    if (isHeading(line)) skipping = isSensitive(line);
+    if (!skipping) out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 /** 把存库的 Json 安全解析为结构化标签（缺字段回退空数组）。 */
 export function parseTags(value: unknown): LearnerMemoryTags {
   const v = (value ?? {}) as Record<string, unknown>;

@@ -1,24 +1,33 @@
 "use client";
 
-import { useActionState } from "react";
-import { submitReflectionAction, type ReflectState } from "@/app/actions/reflection";
-
-const initial: ReflectState = {};
+import { useRef, useState } from "react";
+import { ThinkingPanel, useReasoningStream } from "@/components/thinking";
 
 export function ReflectForm({
   chapterId,
-  chapterIndex,
   questions,
 }: {
   chapterId: string;
-  chapterIndex: number;
   questions: string[];
 }) {
-  const [state, action, pending] = useActionState(submitReflectionAction, initial);
+  const { pending, reasoning, error, run } = useReasoningStream();
+  const refs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const [vErr, setVErr] = useState("");
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pending) return;
+    const answers = questions.map((_, i) => (refs.current[i]?.value ?? "").trim());
+    if (answers.some((a) => a.length === 0)) {
+      setVErr("把每个问题都答一下再提交（哪怕一两句也行）。");
+      return;
+    }
+    setVErr("");
+    await run("/api/learn/reflect", { chapterId, answers });
+  }
+
   return (
-    <form action={action} className="space-y-4">
-      <input type="hidden" name="chapterId" value={chapterId} />
-      <input type="hidden" name="chapterIndex" value={chapterIndex} />
+    <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted">
           共 {questions.length} 个问题，写你真实的想法，没有标准答案。
@@ -32,17 +41,19 @@ export function ReflectForm({
             <span>{q}</span>
           </label>
           <textarea
-            name="answer"
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
             rows={4}
-            required
+            disabled={pending}
             placeholder="举一个你工作里能用上的具体例子"
             className="textarea"
           />
         </div>
       ))}
-      {state?.error && (
+      {(vErr || error) && (
         <p className="badge-danger rounded-lg px-3 py-2 text-sm font-medium" role="alert">
-          {state.error}
+          {vErr || error}
         </p>
       )}
       <div>
@@ -53,6 +64,7 @@ export function ReflectForm({
           提交后 AI 会给出本章小结，并据此更新你的成长画像。
         </p>
       </div>
+      {pending && <ThinkingPanel label="AI 正在结合你的岗位思考本章小结…" reasoning={reasoning} />}
     </form>
   );
 }

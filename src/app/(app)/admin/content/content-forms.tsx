@@ -62,7 +62,7 @@ export function KeywordEditor({
         <span className="kw-caret text-xs text-muted transition-transform" aria-hidden>
           ▶
         </span>
-        <span className="flex-1 truncate">{term}</span>
+        <span className="min-w-0 flex-1 truncate">{term}</span>
         {filled ? (
           <span className="badge badge-success shrink-0">✓ 已补全</span>
         ) : (

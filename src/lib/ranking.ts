@@ -87,8 +87,19 @@ export async function settleChapterWeek(
         _count: { _all: true },
         _avg: { bestFinalScore: true },
       });
+      // 入选门槛还要求「该章反思已完成」（截至本周末）——只有 20 词全过且已反思才参与排名
+      const reflected = await tx.chapterReflection.findMany({
+        where: { chapterId, summary: { not: "" }, updatedAt: { lte: weekEnd } },
+        select: { userId: true },
+      });
+      const reflectedSet = new Set(reflected.map((r) => r.userId));
       const eligible = grouped
-        .filter((g) => g._count._all === keywordCount && g._avg.bestFinalScore != null)
+        .filter(
+          (g) =>
+            g._count._all === keywordCount &&
+            g._avg.bestFinalScore != null &&
+            reflectedSet.has(g.userId),
+        )
         .map((g) => ({ userId: g.userId, avg: g._avg.bestFinalScore as number }))
         .sort((a, b) => b.avg - a.avg);
 

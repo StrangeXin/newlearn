@@ -5,16 +5,20 @@
 // ===========================================================================
 
 import { prisma } from "@/lib/db";
+import { parseTags, stripSensitivePortrait } from "@/lib/memory-diff";
 
 export interface PeerNote {
   name: string;
   score: number;
   note: string;
+  /** 该笔记对应的追问与对方的回答（完整展示同伴是怎么答的）。 */
+  followups: { question: string; answer: string }[];
 }
 
 /**
- * 他人该关键词的笔记（按最佳分降序）。
+ * 他人该关键词的完整记录（笔记 + 追问与回答，按最佳分降序）。
  * 仅当当前用户【已完成】该关键词才返回，否则返回 null（不可见，防抄袭）。
+ * 不含他人的 AI 反馈（那是针对个人的评价，不公开）。
  */
 export async function getPeerNotes(
   userId: string,
@@ -33,16 +37,32 @@ export async function getPeerNotes(
       bestSubmissionId: { not: null },
     },
     orderBy: { bestFinalScore: "desc" },
-    take: 10,
+    take: 3,
     include: {
       user: { select: { name: true } },
-      bestSubmission: { select: { noteText: true } },
+      bestSubmission: {
+        select: {
+          noteText: true,
+          scoring: {
+            select: {
+              followups: {
+                orderBy: { order: "asc" },
+                select: { question: true, answer: true },
+              },
+            },
+          },
+        },
+      },
     },
   });
   return peers.map((p) => ({
     name: p.user.name,
     score: p.bestFinalScore,
     note: p.bestSubmission?.noteText ?? "",
+    followups: (p.bestSubmission?.scoring?.followups ?? []).map((f) => ({
+      question: f.question,
+      answer: f.answer ?? "",
+    })),
   }));
 }
 
@@ -73,41 +93,166 @@ export async function getKeywordStat(
 export interface LeaderRow {
   userId: string;
   name: string;
-  points: number;
+  /** 排名依据：已通关词的「每词最高分」平均值（积分大家差不多，用质量区分）。 */
+  avgScore: number;
   completed: number;
+  /** 当前学科积分（兑换用，仅展示，不参与排名）。 */
+  points: number;
 }
 
-/** 积分榜：按当前学科积分降序，只取靠前的若干人（不公开落后者）。 */
+/** 学习榜：按「每词最高分的均分」降序，只取靠前的若干人（不公开落后者）。
+ *  通关任意一个词即可上榜，**不要求章节反思**（反思只在「各章冠军」周结算时才作门槛，见 ranking.ts）。 */
 export async function getLeaderboard(
   subjectId: string,
   limit = 10,
 ): Promise<LeaderRow[]> {
-  const [byPoints, byCompleted, users] = await Promise.all([
+  const [byScore, byPoints, users] = await Promise.all([
+    prisma.keywordProgress.groupBy({
+      by: ["userId"],
+      where: { subjectId, isCompleted: true },
+      _avg: { bestFinalScore: true },
+      _count: { _all: true },
+    }),
     prisma.pointsLedger.groupBy({
       by: ["userId"],
       where: { subjectId },
       _sum: { amount: true },
     }),
-    prisma.keywordProgress.groupBy({
-      by: ["userId"],
-      where: { subjectId, isCompleted: true },
-      _count: { _all: true },
-    }),
     prisma.user.findMany({ select: { id: true, name: true } }),
   ]);
   const nameOf = new Map(users.map((u) => [u.id, u.name]));
-  const completedOf = new Map(byCompleted.map((c) => [c.userId, c._count._all]));
+  const pointsOf = new Map(byPoints.map((p) => [p.userId, p._sum.amount ?? 0]));
 
-  return byPoints
-    .map((p) => ({
-      userId: p.userId,
-      name: nameOf.get(p.userId) ?? "",
-      points: p._sum.amount ?? 0,
-      completed: completedOf.get(p.userId) ?? 0,
+  return byScore
+    .map((s) => ({
+      userId: s.userId,
+      name: nameOf.get(s.userId) ?? "",
+      avgScore: s._avg.bestFinalScore ?? 0,
+      completed: s._count._all,
+      points: pointsOf.get(s.userId) ?? 0,
     }))
-    .filter((r) => r.points > 0)
-    .sort((a, b) => b.points - a.points || b.completed - a.completed)
+    .filter((r) => r.completed > 0)
+    .sort((a, b) => b.avgScore - a.avgScore || b.completed - a.completed)
     .slice(0, limit);
+}
+
+export interface PeerRecordItem {
+  keywordId: string;
+  term: string;
+  chapterIndex: number;
+  score: number;
+  /** 观看者是否也完成了该词（决定笔记/回答是否解锁，守防抄袭）。 */
+  unlocked: boolean;
+  note?: string;
+  followups?: { question: string; answer: string }[];
+}
+
+/** 同伴当前画像（仅正向公开：强项 + 兴趣 + 隐去短板的画像；不含成长时间线）。 */
+export interface PeerGrowthView {
+  strengths: string[];
+  interests: string[];
+  /** 已剔除「待加强 / 盲区」小节的画像 Markdown。 */
+  portrait: string;
+}
+
+export interface PeerRecordsView {
+  name: string;
+  totalCompleted: number;
+  avgScore: number;
+  points: number;
+  /** 观看者已解锁的词数（用于提示）。 */
+  unlockedCount: number;
+  items: PeerRecordItem[];
+  /** 仅正向公开的成长轨迹；对方还没有画像时为 null。 */
+  growth: PeerGrowthView | null;
+}
+
+/**
+ * 某位排行榜成员的闯关记录（供观摩）。
+ * 守防抄袭：每条笔记/回答仅当【观看者本人也完成了该词】才解锁，否则只给词名+分数。
+ * 仅 top10 在榜成员可看（与 §9.2 公开身份一致）；否则返回 null。
+ */
+export async function getPeerRecords(
+  viewerId: string,
+  targetId: string,
+  subjectId: string,
+): Promise<PeerRecordsView | null> {
+  const leaders = await getLeaderboard(subjectId, 10);
+  const leader = leaders.find((l) => l.userId === targetId);
+  if (!leader) return null; // 不在 top10 / 未公开，不可看
+
+  const [target, progresses, viewerDone, memory] = await Promise.all([
+    prisma.user.findUnique({ where: { id: targetId }, select: { name: true } }),
+    prisma.keywordProgress.findMany({
+      where: { userId: targetId, subjectId, isCompleted: true, bestSubmissionId: { not: null } },
+      orderBy: [{ chapterId: "asc" }, { bestFinalScore: "desc" }],
+      include: {
+        keyword: { include: { chapter: { select: { index: true } } } },
+        bestSubmission: {
+          select: {
+            noteText: true,
+            scoring: {
+              select: {
+                followups: {
+                  orderBy: { order: "asc" },
+                  select: { question: true, answer: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.keywordProgress.findMany({
+      where: { userId: viewerId, subjectId, isCompleted: true },
+      select: { keywordId: true },
+    }),
+    prisma.employeeMemory.findUnique({
+      where: { userId: targetId },
+      select: { tags: true, portrait: true, updateCount: true },
+    }),
+  ]);
+  if (!target) return null;
+
+  // 当前画像（仅正向公开）：强项 + 兴趣 + 隐去短板的画像；不含成长时间线
+  const peerTags = parseTags(memory?.tags);
+  const growth: PeerGrowthView | null =
+    memory && memory.updateCount > 0
+      ? {
+          strengths: peerTags.strengths,
+          interests: peerTags.interests,
+          portrait: stripSensitivePortrait(memory.portrait ?? ""),
+        }
+      : null;
+
+  const done = new Set(viewerDone.map((p) => p.keywordId));
+  const items: PeerRecordItem[] = progresses.map((p) => {
+    const unlocked = done.has(p.keywordId);
+    return {
+      keywordId: p.keywordId,
+      term: p.keyword.term,
+      chapterIndex: p.keyword.chapter.index,
+      score: p.bestFinalScore,
+      unlocked,
+      note: unlocked ? (p.bestSubmission?.noteText ?? "") : undefined,
+      followups: unlocked
+        ? (p.bestSubmission?.scoring?.followups ?? []).map((f) => ({
+            question: f.question,
+            answer: f.answer ?? "",
+          }))
+        : undefined,
+    };
+  });
+
+  return {
+    name: target.name,
+    totalCompleted: items.length,
+    avgScore: leader.avgScore,
+    points: leader.points,
+    unlockedCount: items.filter((i) => i.unlocked).length,
+    items,
+    growth,
+  };
 }
 
 export interface ChapterWinner {

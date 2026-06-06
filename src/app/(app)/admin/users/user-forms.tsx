@@ -8,6 +8,14 @@ import {
   setRoleAction,
   type AdminState,
 } from "@/app/actions/admin";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const initial: AdminState = {};
 
@@ -32,10 +40,17 @@ export function AddUserForm() {
           <label htmlFor="add-user-role" className="field-label">
             角色
           </label>
-          <select id="add-user-role" name="role" defaultValue="EMPLOYEE" className="select">
-            <option value="EMPLOYEE">员工</option>
-            <option value="ADMIN">管理员</option>
-          </select>
+          <Select name="role" defaultValue="EMPLOYEE">
+            <SelectTrigger id="add-user-role" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="EMPLOYEE">员工</SelectItem>
+                <SelectItem value="ADMIN">管理员</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
         <button type="submit" disabled={pending} className="btn btn-primary shrink-0">
           {pending ? "添加中…" : "添加"}
@@ -112,18 +127,22 @@ export function UserRowActions({
         </span>
       )}
       {canManageRole && (
-        <select
-          aria-label="设置该成员的角色"
-          title="设置角色"
+        <Select
           defaultValue={role}
           disabled={pending}
-          onChange={(e) => run(() => setRoleAction(userId, e.target.value))}
-          className="select w-auto px-2 py-1 text-xs"
+          onValueChange={(v) => run(() => setRoleAction(userId, v))}
         >
-          <option value="EMPLOYEE">设为员工</option>
-          <option value="ADMIN">设为管理员</option>
-          <option value="SUPERADMIN">设为超管</option>
-        </select>
+          <SelectTrigger size="sm" aria-label="设置该成员的角色" className="w-auto text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="EMPLOYEE">设为员工</SelectItem>
+              <SelectItem value="ADMIN">设为管理员</SelectItem>
+              <SelectItem value="SUPERADMIN">设为超管</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       )}
       <button
         type="button"

@@ -2,6 +2,14 @@
 
 import { useActionState } from "react";
 import { saveProfileAction, type ProfileState } from "@/app/actions/profile";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const initial: ProfileState = {};
 
@@ -40,16 +48,20 @@ export function OnboardingForm() {
             <label htmlFor="aiFamiliarity" className="field-label">
               对 AI 的熟悉度
             </label>
-            <select id="aiFamiliarity" name="aiFamiliarity" required defaultValue="" className="select">
-              <option value="" disabled>
-                请选择
-              </option>
-              {familiarityOptions.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            <Select name="aiFamiliarity" required>
+              <SelectTrigger id="aiFamiliarity" className="w-full">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {familiarityOptions.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </fieldset>

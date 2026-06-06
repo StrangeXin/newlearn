@@ -21,6 +21,11 @@ export interface Keyword {
    * 用于提升打分准确度（见 PRD §5.1 / §6.1）；不填则由打分器自由判断。
    */
   referencePoints?: string[];
+  /**
+   * 可选「所在章节主题」（从起源到前沿的编排脉络）。作为追问/打分的背景上下文，
+   * 帮助模型把该词放进章节脉络里找薄弱点；不写元指令，仅作上下文（见 PRD §14.3.1）。
+   */
+  chapterTheme?: string;
 }
 
 /** 单条评分维度（rubric）。所有维度的 weight 之和应为 1。 */
@@ -72,7 +77,7 @@ export interface LearnerContext {
 
 /** submitNote 的输入：原始笔记 + 关键词上下文（可选学习者上下文）。 */
 export interface SubmitNoteInput {
-  /** 学习者提交的纯文本笔记（业务层已校验 100–5000 字，见 PRD §6 步骤 2）。 */
+  /** 学习者提交的纯文本笔记（业务层已校验 100–2000 字，见 PRD §6 步骤 2）。 */
   note: string;
   /** 当前关键词及其可选参考要点。 */
   keyword: Keyword;
@@ -164,6 +169,29 @@ export interface ReflectionSummaryResult {
   portrait: string;
 }
 
+// --------------------------- 结果页追加提问 ---------------------------
+
+/** 员工通关某词后在结果页向 AI 追加提问的输入。 */
+export interface AnswerQuestionInput {
+  keyword: Keyword;
+  /** 该次提交的原笔记。 */
+  note: string;
+  /** 本次评分的追问与员工回答。 */
+  followups: string[];
+  answers: string[];
+  /** 本轮新问题。 */
+  question: string;
+  /** 此前在本次提交里的提问与回答（多轮上下文）。 */
+  priorQA?: { question: string; answer: string }[];
+  learner?: LearnerContext;
+}
+
+/** 流式回答的一段增量：思考过程（reasoning）或正文（answer）。 */
+export interface AnswerChunk {
+  type: "reasoning" | "answer";
+  text: string;
+}
+
 // -------------------------------- 服务接口 ---------------------------------
 
 /**
@@ -185,6 +213,9 @@ export interface ScoringService {
 
   /** 章节反思作答后：给出章节总结，并把岗位结合融入画像。 */
   reflectionSummary(input: ReflectionSummaryInput): Promise<ReflectionSummaryResult>;
+
+  /** 结果页追加提问：结合该词笔记/追问/历史提问，回答员工的新问题。 */
+  answerQuestion(input: AnswerQuestionInput): Promise<{ answer: string }>;
 }
 
 /** 空记忆标签（画像尚未建立时的初值）。 */

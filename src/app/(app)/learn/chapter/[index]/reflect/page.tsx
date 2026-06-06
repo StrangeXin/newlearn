@@ -7,6 +7,8 @@ import {
   getOrCreateReflection,
   isChapterFullyCompleted,
 } from "@/lib/reflection";
+import { Markdown } from "@/components/markdown";
+import { ReasoningDialog } from "@/components/reasoning-dialog";
 import { ReflectForm } from "./reflect-form";
 
 export default async function ReflectPage({
@@ -87,22 +89,34 @@ export default async function ReflectPage({
       {reflection.done ? (
         <>
           <div className="card mt-6 p-6">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="badge badge-success">✓ 反思已完成</span>
               <h2 className="font-bold text-ink">AI 给你的本章小结</h2>
+              {reflection.reasoning && (
+                <span className="ml-auto">
+                  <ReasoningDialog
+                    reasoning={reflection.reasoning}
+                    title="AI 章节小结的思考过程"
+                    summary="这是 DeepSeek 结合你的反思作答与岗位，生成本章小结前的完整推理。"
+                  />
+                </span>
+              )}
             </div>
-            <p className="panel mt-4 whitespace-pre-wrap p-4 text-sm leading-relaxed text-ink">
-              {reflection.summary}
-            </p>
+            <div className="panel mt-4 p-4">
+              <Markdown>{reflection.summary}</Markdown>
+            </div>
           </div>
 
           <h2 className="mt-7 text-sm font-semibold text-muted">你的逐题作答</h2>
           <div className="mt-3 space-y-2.5">
             {reflection.questions.map((q, i) => (
-              <details key={i} className="card px-4 py-3">
-                <summary className="flex cursor-pointer items-start gap-2 text-sm font-medium text-ink">
+              <details key={i} className="card px-4 py-3 [&[open]>summary>.rc]:rotate-180">
+                <summary className="flex cursor-pointer list-none items-start gap-2 text-sm font-medium text-ink">
                   <span className="text-brand-700">{i + 1}.</span>
                   <span className="flex-1">{q}</span>
+                  <span className="rc shrink-0 text-xs text-muted transition-transform" aria-hidden>
+                    ▾
+                  </span>
                 </summary>
                 <p className="mt-2.5 whitespace-pre-wrap border-t border-line pt-2.5 text-sm leading-relaxed text-muted">
                   {reflection.answers[i] || "（未作答）"}
@@ -125,11 +139,7 @@ export default async function ReflectPage({
         </>
       ) : (
         <div className="card mt-6 p-5 sm:p-6">
-          <ReflectForm
-            chapterId={chapter.id}
-            chapterIndex={chapter.index}
-            questions={reflection.questions}
-          />
+          <ReflectForm chapterId={chapter.id} questions={reflection.questions} />
         </div>
       )}
     </main>

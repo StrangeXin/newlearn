@@ -87,6 +87,8 @@ model User {
   memorySnapshots     EmployeeMemorySnapshot[]
   /// 章节反思（每章学完后的总结+结合岗位追问）
   chapterReflections  ChapterReflection[]
+  /// 写笔记过程中的草稿（中途退出保留记录）
+  noteDrafts          NoteDraft[]
 
   // 审计：导入者 / 角色变更者（自引用）
   createdBy        User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -193,6 +195,7 @@ model Keyword {
   submissions     Submission[]
   keywordProgress KeywordProgress[]
   memorySnapshots EmployeeMemorySnapshot[]
+  noteDrafts      NoteDraft[]
 
   /// 同一章内关键词不重复
   @@unique([chapterId, term])
@@ -208,7 +211,7 @@ model Submission {
   id         String           @id @default(cuid())
   userId     String
   keywordId  String
-  /// 学习笔记纯文本（业务层校验 100~5000 字）
+  /// 学习笔记纯文本（业务层校验 100~2000 字）
   noteText   String
   status     SubmissionStatus @default(PENDING_INITIAL)
   /// 终评时回填的最终分快照（1-100）；冗余自 Scoring.finalScore，便于「同伴可见性」按分降序无需 join。
@@ -224,6 +227,9 @@ model Submission {
 
   /// 一次提交对应一次评分流程（初分→追问→终评）
   scoring Scoring?
+
+  /// 结果页的追加提问（员工通关后还能就该词向 AI 多次提问）
+  questions LearnerQuestion[]
 
   /// 反向：被某条 KeywordProgress 标记为「最佳笔记」（同伴可见性直达最佳记录）
   bestOfProgress KeywordProgress? @relation("BestSubmission")
@@ -242,11 +248,15 @@ model Scoring {
   submissionId String   @unique
   /// DeepSeek 初始分 1-100
   initialScore Int
+  /// 初评的 DeepSeek 思考过程（reasoning_content）；用于学习者端「查看 AI 思考」小弹窗。mock 或非流式时为 null。
+  initialReasoning String?
   /// 综合「原笔记+追问回答」后的最终分 1-100；终评前为 null。
   /// 通过与否（>=60）为本字段的纯派生量，不再独立持久化 isPassed，避免脏数据/失同步。
   finalScore   Int?
   /// 终评的中文反馈（面向学习者）；终评前为 null。
   feedback     String?
+  /// 终评的 DeepSeek 思考过程（reasoning_content）；用于「查看 AI 思考」小弹窗。mock 或非流式时为 null。
+  finalReasoning String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -276,6 +286,27 @@ model Followup {
   @@unique([scoringId, order])
   @@index([scoringId])
   @@map("followups")
+}
+
+/// 结果页追加提问：员工通关某词后还能就该词向 AI 多次提问，AI 结合笔记/追问/历史提问作答。
+model LearnerQuestion {
+  id           String   @id @default(cuid())
+  submissionId String
+  /// 本次提交内的提问序号（1 起）
+  order        Int
+  /// 员工的问题
+  question     String
+  /// AI 的回答
+  answer       String
+  /// AI 的思考过程（reasoning，推理模型才有）
+  reasoning    String?
+  createdAt    DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, order])
+  @@index([submissionId])
+  @@map("learner_questions")
 }
 
 // ============================================================================
@@ -530,6 +561,8 @@ model ChapterReflection {
   answers   Json
   /// AI 给出的章节总结
   summary   String
+  /// 生成总结时 DeepSeek 的思考过程（reasoning_content）；用于「AI 思考过程」小弹窗。mock / 未提交时为 null。
+  reasoning String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -539,4 +572,78 @@ model ChapterReflection {
   @@unique([userId, chapterId])
   @@index([userId])
   @@map("chapter_reflections")
+}
+
+// ============================================================================
+// 笔记草稿（中途退出保留记录，PRD 之外的体验增强）
+// ============================================================================
+
+/// 写笔记过程中的草稿：每个用户对每个关键词至多一份。
+/// 提交成功后删除；不做 100~2000 字校验（草稿允许任意长度，提交时才校验）。
+model NoteDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  keywordId String
+  /// 草稿正文
+  text      String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  /// 每用户每关键词仅一份草稿
+  @@unique([userId, keywordId])
+  @@index([userId])
+  @@map("note_drafts")
+}
+
+// ============================================================================
+// AI 调用审计日志（管理员可审查每次 AI 调用的上下文与过程）
+// ============================================================================
+
+/// 追加写的 AI 调用日志：记录每次调用的完整提示、模型推理、返回与用量。
+/// 独立于用户/关键词生命周期（不设外键级联），便于删除用户后仍可审计；
+/// keywordTerm 等做冗余存名，name/title 由管理页按 id 关联补全。
+model AiCallLog {
+  id           String   @id @default(cuid())
+  /// 阶段：submitNote | finalize | updateMemory | reflectionQuestions | reflectionSummary
+  phase        String
+  /// 提供方：deepseek | mock
+  provider     String
+  /// 模型名（如 deepseek-v4-flash）
+  model        String?
+  userId       String?
+  keywordId    String?
+  /// 关键词名（冗余存名，便于直接展示）
+  keywordTerm  String?
+  chapterId    String?
+  submissionId String?
+  /// 发送给模型的 system 提示（完整上下文）
+  systemPrompt String?
+  /// 发送给模型的 user 提示（拼入了笔记、追问、学习者档案等上下文）
+  userPrompt   String?
+  /// 模型返回的正文（应为严格 JSON 字符串）
+  responseRaw  String?
+  /// 模型的推理过程（reasoning_content，推理模型才有）
+  reasoning    String?
+  /// 解析后的结构化结果
+  parsed       Json?
+  promptTokens     Int?
+  completionTokens Int?
+  reasoningTokens  Int?
+  totalTokens      Int?
+  /// 调用耗时（毫秒）
+  latencyMs    Int?
+  /// 是否成功
+  ok           Boolean  @default(true)
+  /// 失败信息（ok=false 时）
+  errorText    String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([keywordId])
+  @@index([phase])
+  @@map("ai_call_logs")
 }

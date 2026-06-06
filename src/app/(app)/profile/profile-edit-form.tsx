@@ -2,6 +2,14 @@
 
 import { useActionState } from "react";
 import { editProfileAction, type EditProfileState } from "@/app/actions/profile";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const initial: EditProfileState = {};
 
@@ -43,16 +51,20 @@ export function ProfileEditForm({ values }: { values: ProfileValues }) {
         </div>
         <div>
           <label className="field-label">对 AI 的熟悉度</label>
-          <select name="aiFamiliarity" required defaultValue={values.aiFamiliarity} className="select">
-            <option value="" disabled>
-              请选择
-            </option>
-            {familiarityOptions.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
+          <Select name="aiFamiliarity" required defaultValue={values.aiFamiliarity || undefined}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {familiarityOptions.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div>

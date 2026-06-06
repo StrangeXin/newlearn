@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { type DiffLine, lineDiff, parseDiff, parseTags } from "@/lib/memory-diff";
+import { ExpandableText } from "@/components/expandable-text";
 
 function scoreBadge(score: number) {
   // 金色只用于通过/高分（奖励语义）；未达标用中性，避免金色误用
@@ -85,7 +86,6 @@ const dateFmt = new Intl.DateTimeFormat("zh-CN", {
 
 export default async function GrowthPage() {
   const user = await requireUser();
-  if (user.role !== "EMPLOYEE") redirect("/admin");
 
   const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
   if (!profile) redirect("/onboarding");
@@ -145,14 +145,12 @@ export default async function GrowthPage() {
                 <PortraitChips items={tags.interests} badge="badge-brand" />
               </div>
             </div>
-            <details className="mt-5 rounded-xl border border-line bg-surface-2">
-              <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-brand-700">
-                展开画像全文
-              </summary>
-              <pre className="whitespace-pre-wrap border-t border-line px-3 py-3 font-mono text-xs leading-relaxed text-ink">
-                {memory?.portrait || "画像正文会随你作答逐步补全。"}
-              </pre>
-            </details>
+            <div className="mt-5">
+              <div className="field-label">画像全文</div>
+              <div className="rounded-xl border border-line bg-surface-2 p-4">
+                <ExpandableText markdown text={memory?.portrait || "画像正文会随你作答逐步补全。"} />
+              </div>
+            </div>
           </section>
 
           {/* 时间线：每次更新的 git 风格 diff */}

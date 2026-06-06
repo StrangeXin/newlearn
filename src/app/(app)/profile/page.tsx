@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { parseTags } from "@/lib/memory-diff";
+import { ExpandableText } from "@/components/expandable-text";
 import { ProfileEditForm } from "./profile-edit-form";
 
 function Chips({ items, badge }: { items: string[]; badge: string }) {
@@ -21,7 +22,6 @@ function Chips({ items, badge }: { items: string[]; badge: string }) {
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  if (user.role !== "EMPLOYEE") redirect("/admin");
 
   const [profile, memory] = await Promise.all([
     prisma.employeeProfile.findUnique({ where: { userId: user.id } }),
@@ -89,14 +89,12 @@ export default async function ProfilePage() {
               <div className="field-label">兴趣方向</div>
               <Chips items={tags.interests} badge="badge-brand" />
             </div>
-            <details className="rounded-xl border border-line bg-surface">
-              <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-brand-700">
-                展开画像全文
-              </summary>
-              <pre className="whitespace-pre-wrap border-t border-line px-3 py-3 font-mono text-xs leading-relaxed text-ink">
-                {memory.portrait}
-              </pre>
-            </details>
+            <div>
+              <div className="field-label">画像全文</div>
+              <div className="rounded-xl border border-line bg-surface p-4">
+                <ExpandableText markdown text={memory.portrait} />
+              </div>
+            </div>
             <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
               <span className="text-xs text-muted">想看它一步步变清晰的过程？</span>
               <Link href="/growth" className="btn btn-secondary btn-sm shrink-0">

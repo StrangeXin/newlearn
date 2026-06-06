@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* ============================================================
    智学闯关 · 设计系统（精致克制的闯关感）
@@ -44,6 +45,22 @@
     monospace;
 }
 
+/* shadcn/ui 组件用的语义色 → 全部映射到上面的品牌色板，不另起一套配色。
+   只为引入的库组件（Select 等）服务，库组件因此天然「精致克制」同款。 */
+@theme inline {
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-ink);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-ink);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--color-brand-500);
+  --color-muted-foreground: var(--color-muted);
+  --color-accent: var(--color-brand-50);
+  --color-accent-foreground: var(--color-brand-700);
+  --color-destructive: var(--color-danger-500);
+}
+
 /* ---------------------------------------------------------- base */
 @layer base {
   :root {
@@ -59,6 +76,12 @@
   }
   ::selection {
     background: color-mix(in oklch, var(--color-brand-500) 26%, transparent);
+  }
+  /* Tailwind v4 不再默认给按钮 cursor:pointer，这里统一补上（禁用态除外） */
+  button:not(:disabled),
+  summary,
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
   /* 键盘可达：清晰可见的 focus 态 */
   :focus-visible {
@@ -233,6 +256,17 @@
     outline: none;
     border-color: var(--color-brand-500);
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-brand-500) 22%, transparent);
+  }
+  /* 下拉选择：去掉原生外观，统一描边 + 自绘箭头，移动端各浏览器一致（不串原生样式） */
+  .select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6783' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 1rem;
   }
   .textarea {
     resize: vertical;
@@ -421,5 +455,117 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------ markdown 正文 */
+/* AI 回答 / 反馈的 Markdown 渲染：贴合现有排版，克制不喧宾夺主 */
+@layer components {
+  .md {
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-ink);
+    word-break: break-word;
+  }
+  .md > :first-child {
+    margin-top: 0;
+  }
+  .md > :last-child {
+    margin-bottom: 0;
+  }
+  .md p {
+    margin: 0.5em 0;
+  }
+  .md ul,
+  .md ol {
+    margin: 0.5em 0;
+    padding-left: 1.4em;
+  }
+  .md ul {
+    list-style: disc;
+  }
+  .md ol {
+    list-style: decimal;
+  }
+  .md li {
+    margin: 0.25em 0;
+  }
+  .md li::marker {
+    color: var(--color-muted);
+  }
+  .md strong {
+    font-weight: 700;
+  }
+  .md em {
+    font-style: italic;
+  }
+  .md a {
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .md h1,
+  .md h2,
+  .md h3,
+  .md h4 {
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0.7em 0 0.3em;
+    color: var(--color-ink);
+  }
+  .md h1 {
+    font-size: 1.15em;
+  }
+  .md h2 {
+    font-size: 1.08em;
+  }
+  .md h3 {
+    font-size: 1em;
+  }
+  .md code {
+    background: var(--color-surface-2);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  .md pre {
+    background: var(--color-surface-2);
+    padding: 0.7em 0.85em;
+    border-radius: 0.6rem;
+    overflow-x: auto;
+    margin: 0.6em 0;
+  }
+  .md pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.82em;
+  }
+  .md blockquote {
+    background: var(--color-surface-2);
+    border-radius: 0.5rem;
+    padding: 0.5em 0.75em;
+    margin: 0.6em 0;
+    color: var(--color-muted);
+  }
+  .md hr {
+    border: 0;
+    border-top: 1px solid var(--color-line);
+    margin: 0.9em 0;
+  }
+  .md table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.6em 0;
+  }
+  .md th,
+  .md td {
+    border: 1px solid var(--color-line);
+    padding: 0.35em 0.6em;
+    text-align: left;
+  }
+  .md th {
+    background: var(--color-surface-2);
+    font-weight: 600;
   }
 }

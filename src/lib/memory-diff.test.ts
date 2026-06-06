@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeMemoryDiff, lineDiff } from "./memory-diff";
+import { computeMemoryDiff, lineDiff, stripSensitivePortrait } from "./memory-diff";
 
 const tags = (s: string[], w: string[] = [], i: string[] = [], b: string[] = []) => ({
   strengths: s,
@@ -45,5 +45,48 @@ describe("lineDiff（git 风格按行对比）", () => {
     const out = lineDiff("- 完成「X」，得分 70", "- 完成「Y」，得分 90");
     expect(out.some((l) => l.type === "del")).toBe(true);
     expect(out.some((l) => l.type === "add")).toBe(true);
+  });
+});
+
+describe("stripSensitivePortrait（同伴正向公开，剔除短板小节）", () => {
+  const portrait = [
+    "# 产品经理 · 学习画像",
+    "## 掌握强项",
+    "- 概念清晰",
+    "## 待加强",
+    "- 数学推导薄弱",
+    "## 知识盲区",
+    "- 分布式系统",
+    "## 兴趣方向",
+    "- 多模态",
+    "## 与岗位结合",
+    "- 能落地到需求评审",
+    "## 最近进展",
+    "- 连续通关 5 词",
+  ].join("\n");
+
+  it("移除「待加强」与「盲区」小节及其正文", () => {
+    const out = stripSensitivePortrait(portrait);
+    expect(out).not.toContain("待加强");
+    expect(out).not.toContain("数学推导薄弱");
+    expect(out).not.toContain("知识盲区");
+    expect(out).not.toContain("分布式系统");
+  });
+
+  it("保留强项 / 兴趣 / 岗位结合 / 进展", () => {
+    const out = stripSensitivePortrait(portrait);
+    expect(out).toContain("# 产品经理 · 学习画像");
+    expect(out).toContain("## 掌握强项");
+    expect(out).toContain("- 概念清晰");
+    expect(out).toContain("## 兴趣方向");
+    expect(out).toContain("- 多模态");
+    expect(out).toContain("## 与岗位结合");
+    expect(out).toContain("## 最近进展");
+    expect(out).toContain("- 连续通关 5 词");
+  });
+
+  it("空画像返回空串", () => {
+    expect(stripSensitivePortrait("")).toBe("");
+    expect(stripSensitivePortrait("   ")).toBe("");
   });
 });

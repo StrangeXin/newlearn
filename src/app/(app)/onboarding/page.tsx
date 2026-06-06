@@ -5,8 +5,7 @@ import { OnboardingForm } from "./onboarding-form";
 
 export default async function OnboardingPage() {
   const user = await requireUser();
-  // 管理员无需填资料；已填过的直接进首页
-  if (user.role !== "EMPLOYEE") redirect("/admin");
+  // 任何角色都可填资料参与学习；已填过的直接进闯关页
   const existing = await prisma.employeeProfile.findUnique({
     where: { userId: user.id },
   });

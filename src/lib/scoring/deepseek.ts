@@ -4,7 +4,10 @@
 // 两段式契约见 ./types.ts；评分 rubric 注入 system prompt，要求严格 JSON 返回。
 // ===========================================================================
 
+import { recordAiCall, recordAiCallWith, type AiTrace } from "@/lib/ai-log";
 import {
+  AnswerChunk,
+  AnswerQuestionInput,
   EMPTY_TAGS,
   FinalizeInput,
   FinalizeResult,
@@ -96,36 +99,76 @@ async function chat(
   userContent: string,
   system: string = SYSTEM_PROMPT,
 ): Promise<Record<string, unknown>> {
-  const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${cfg.apiKey}`,
-    },
-    body: JSON.stringify({
+  const startedAt = Date.now();
+  let content: string | undefined;
+  let reasoning: string | undefined;
+  let usage:
+    | {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        total_tokens?: number;
+        completion_tokens_details?: { reasoning_tokens?: number };
+      }
+    | undefined;
+  let parsed: Record<string, unknown> | undefined;
+  let errorText: string | undefined;
+
+  try {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`DeepSeek 接口返回 ${res.status}：${body.slice(0, 300)}`);
+    }
+
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string; reasoning_content?: string } }[];
+      usage?: typeof usage;
+    };
+    content = data.choices?.[0]?.message?.content;
+    reasoning = data.choices?.[0]?.message?.reasoning_content;
+    usage = data.usage;
+    if (!content) {
+      throw new Error("DeepSeek 返回为空，无法解析评分结果。");
+    }
+    parsed = parseJsonObject(content);
+    return parsed;
+  } catch (e) {
+    errorText = e instanceof Error ? e.message : String(e);
+    throw e;
+  } finally {
+    // 审计每次 AI 调用（含失败）；写日志不阻断、不影响主流程。
+    await recordAiCall({
       model: cfg.model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`DeepSeek 接口返回 ${res.status}：${body.slice(0, 300)}`);
+      systemPrompt: system,
+      userPrompt: userContent,
+      responseRaw: content,
+      reasoning,
+      parsed,
+      promptTokens: usage?.prompt_tokens,
+      completionTokens: usage?.completion_tokens,
+      reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens,
+      totalTokens: usage?.total_tokens,
+      latencyMs: Date.now() - startedAt,
+      ok: errorText === undefined,
+      errorText,
+    });
   }
-
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error("DeepSeek 返回为空，无法解析评分结果。");
-  }
-  return parseJsonObject(content);
 }
 
 /** 把学习者资料与画像拼成一段提示上下文（缺省则返回空串）。 */
@@ -158,48 +201,46 @@ function formatLearner(learner?: LearnerContext): string {
   return `\n【学习者档案（仅供参考，勿当作笔记内容打分）】\n${lines.join("\n")}\n`;
 }
 
-export class DeepSeekScoringService implements ScoringService {
-  async submitNote(input: SubmitNoteInput): Promise<SubmitNoteResult> {
-    const cfg = readConfig();
-    const { note, keyword } = input;
-    const userContent = `【任务阶段】submitNote
+function buildSubmitNotePrompt(input: SubmitNoteInput): string {
+  const { note, keyword } = input;
+  return `【任务阶段】submitNote
 【关键词】
 - 名称：${keyword.term}
 - 简介：${keyword.description ?? "（无）"}
+- 所在章节主题：${keyword.chapterTheme ?? "（无）"}
 - 参考考核要点：
 ${formatReferencePoints(keyword.referencePoints)}
 ${formatLearner(input.learner)}
 【学习者笔记】
 ${note}
 
-请按 rubric 评估并据笔记薄弱点生成 1~3 个追问（笔记越完整追问越少）。输出严格 JSON：{"initialScore": 整数(1-100), "followups": [1~3 条中文追问]}。只返回 JSON。`;
+请按 rubric 评估。追问要扣住这篇笔记本身：对照「参考考核要点」与「章节主题」，找出笔记里缺失、含糊或可深入之处，针对这些**具体短板**提 1~3 个追问，不要泛泛而问、也不要脱离笔记已写内容（笔记越完整、覆盖越全，追问越少）。输出严格 JSON：{"initialScore": 整数(1-100), "followups": [1~3 条中文追问]}。只返回 JSON。`;
+}
 
-    const obj = await chat(cfg, userContent);
-    const initialScore = clampScore(Number(obj.initialScore));
-    let followups = Array.isArray(obj.followups)
-      ? obj.followups.map((f) => String(f)).filter((f) => f.trim().length > 0)
-      : [];
-    if (followups.length === 0) {
-      followups = [`请进一步说明「${keyword.term}」的核心原理或机制，并举一个实例。`];
-    }
-    followups = followups.slice(0, 3);
-    return { initialScore, followups };
+function parseSubmitNote(obj: Record<string, unknown>, term: string): SubmitNoteResult {
+  const initialScore = clampScore(Number(obj.initialScore));
+  let followups = Array.isArray(obj.followups)
+    ? obj.followups.map((f) => String(f)).filter((f) => f.trim().length > 0)
+    : [];
+  if (followups.length === 0) {
+    followups = [`请进一步说明「${term}」的核心原理或机制，并举一个实例。`];
   }
+  return { initialScore, followups: followups.slice(0, 3) };
+}
 
-  async finalize(input: FinalizeInput): Promise<FinalizeResult> {
-    const cfg = readConfig();
-    const { note, keyword, followups, answers } = input;
-    const qa = followups
-      .map(
-        (q, i) =>
-          `追问${i + 1}：${q}\n回答${i + 1}：${answers[i]?.trim() ? answers[i] : "（未作答）"}`,
-      )
-      .join("\n");
-
-    const userContent = `【任务阶段】finalize
+function buildFinalizePrompt(input: FinalizeInput): string {
+  const { note, keyword, followups, answers } = input;
+  const qa = followups
+    .map(
+      (q, i) =>
+        `追问${i + 1}：${q}\n回答${i + 1}：${answers[i]?.trim() ? answers[i] : "（未作答）"}`,
+    )
+    .join("\n");
+  return `【任务阶段】finalize
 【关键词】
 - 名称：${keyword.term}
 - 简介：${keyword.description ?? "（无）"}
+- 所在章节主题：${keyword.chapterTheme ?? "（无）"}
 - 参考考核要点：
 ${formatReferencePoints(keyword.referencePoints)}
 ${formatLearner(input.learner)}
@@ -210,17 +251,210 @@ ${note}
 ${qa}
 
 综合原笔记与追问回答重新评估，输出严格 JSON：{"finalScore": 整数(1-100), "passed": 布尔(finalScore>=60), "feedback": "中文反馈"}。只返回 JSON。`;
+}
 
-    const obj = await chat(cfg, userContent);
-    const finalScore = clampScore(Number(obj.finalScore));
-    const passed = finalScore >= PASS_THRESHOLD; // 以分数为准，忽略模型可能的不一致
-    const feedback =
-      typeof obj.feedback === "string" && obj.feedback.trim().length > 0
-        ? obj.feedback
-        : passed
-          ? `最终得分 ${finalScore} 分，已达到及格线。`
-          : `最终得分 ${finalScore} 分，未达及格线，可重新提交再次挑战。`;
-    return { finalScore, passed, feedback };
+function parseFinalize(obj: Record<string, unknown>): FinalizeResult {
+  const finalScore = clampScore(Number(obj.finalScore));
+  const passed = finalScore >= PASS_THRESHOLD; // 以分数为准，忽略模型可能的不一致
+  const feedback =
+    typeof obj.feedback === "string" && obj.feedback.trim().length > 0
+      ? obj.feedback
+      : passed
+        ? `最终得分 ${finalScore} 分，已达到及格线。`
+        : `最终得分 ${finalScore} 分，未达及格线，可重新提交再次挑战。`;
+  return { finalScore, passed, feedback };
+}
+
+/** 流式跑一次「要 JSON 结果」的评分调用：把 reasoning 逐段交给 onReasoning 展示，
+ *  content（JSON）只在后台累计、解析，不外泄给用户。结束/失败写一条审计日志。 */
+async function streamChatJson(
+  cfg: DeepSeekConfig,
+  system: string,
+  userContent: string,
+  trace: AiTrace,
+  onReasoning: (text: string) => void,
+): Promise<Record<string, unknown>> {
+  const startedAt = Date.now();
+  let content = "";
+  let reasoning = "";
+  let usage:
+    | {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        total_tokens?: number;
+        completion_tokens_details?: { reasoning_tokens?: number };
+      }
+    | undefined;
+  let parsed: Record<string, unknown> | undefined;
+  let errorText: string | undefined;
+
+  try {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        stream: true,
+      }),
+    });
+    if (!res.ok || !res.body) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`DeepSeek 接口返回 ${res.status}：${body.slice(0, 200)}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith("data:")) continue;
+        const data = t.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        let json: {
+          choices?: { delta?: { content?: string; reasoning_content?: string } }[];
+          usage?: typeof usage;
+        };
+        try {
+          json = JSON.parse(data);
+        } catch {
+          continue;
+        }
+        const delta = json.choices?.[0]?.delta;
+        if (delta?.reasoning_content) {
+          reasoning += delta.reasoning_content;
+          onReasoning(delta.reasoning_content); // 思考过程：可展示
+        }
+        if (delta?.content) content += delta.content; // JSON：只累计，不外泄
+        if (json.usage) usage = json.usage;
+      }
+    }
+    if (!content.trim()) throw new Error("DeepSeek 流式返回为空");
+    parsed = parseJsonObject(content);
+    return parsed;
+  } catch (e) {
+    errorText = e instanceof Error ? e.message : String(e);
+    throw e;
+  } finally {
+    await recordAiCallWith(trace, {
+      model: cfg.model,
+      systemPrompt: system,
+      userPrompt: userContent,
+      responseRaw: content || undefined,
+      reasoning: reasoning || undefined,
+      parsed,
+      promptTokens: usage?.prompt_tokens,
+      completionTokens: usage?.completion_tokens,
+      reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens,
+      totalTokens: usage?.total_tokens,
+      latencyMs: Date.now() - startedAt,
+      ok: errorText === undefined,
+      errorText,
+    });
+  }
+}
+
+/** 流式版 submitNote：展示思考过程，返回解析后的初分与追问。 */
+export async function streamSubmitNoteDeepSeek(
+  input: SubmitNoteInput,
+  trace: AiTrace,
+  onReasoning: (text: string) => void,
+): Promise<SubmitNoteResult> {
+  const obj = await streamChatJson(
+    readConfig(),
+    SYSTEM_PROMPT,
+    buildSubmitNotePrompt(input),
+    trace,
+    onReasoning,
+  );
+  return parseSubmitNote(obj, input.keyword.term);
+}
+
+/** 流式版 finalize：展示思考过程，返回解析后的终评。 */
+export async function streamFinalizeDeepSeek(
+  input: FinalizeInput,
+  trace: AiTrace,
+  onReasoning: (text: string) => void,
+): Promise<FinalizeResult> {
+  const obj = await streamChatJson(
+    readConfig(),
+    SYSTEM_PROMPT,
+    buildFinalizePrompt(input),
+    trace,
+    onReasoning,
+  );
+  return parseFinalize(obj);
+}
+
+function buildReflectionSummaryPrompt(input: ReflectionSummaryInput): string {
+  const qa = input.questions
+    .map(
+      (q, i) =>
+        `问${i + 1}：${q}\n答${i + 1}：${input.answers[i]?.trim() ? input.answers[i] : "（未作答）"}`,
+    )
+    .join("\n");
+  return `根据员工对《${input.chapterTitle}》章节反思的回答，产出：
+1) summary：一段面向该员工的中文章节总结（先肯定、再点出如何把本章用于其岗位、给一个可落地的小建议）。
+2) portrait：在【已有画像】基础上更新的 Markdown 画像，重点补充/丰富「## 与岗位结合」小节，保持其它小节结构稳定，便于逐行对比。
+${formatLearner(input.learner)}
+【反思问答】
+${qa}
+【已有画像】
+${input.learner.memory?.portrait || "（暂无）"}
+严格 JSON：{"summary":"...","portrait":"<markdown>"}。只返回 JSON。`;
+}
+
+function parseReflectionSummary(
+  obj: Record<string, unknown>,
+  input: ReflectionSummaryInput,
+): ReflectionSummaryResult {
+  const summary = typeof obj.summary === "string" ? obj.summary : "已完成本章反思。";
+  const portrait =
+    typeof obj.portrait === "string" && obj.portrait.trim()
+      ? obj.portrait
+      : input.learner.memory?.portrait ?? "";
+  return { summary, portrait };
+}
+
+/** 流式版章节反思总结：展示思考过程，返回解析后的总结与更新画像。 */
+export async function streamReflectionSummaryDeepSeek(
+  input: ReflectionSummaryInput,
+  trace: AiTrace,
+  onReasoning: (text: string) => void,
+): Promise<ReflectionSummaryResult> {
+  const obj = await streamChatJson(
+    readConfig(),
+    REFLECTION_SYSTEM_PROMPT,
+    buildReflectionSummaryPrompt(input),
+    trace,
+    onReasoning,
+  );
+  return parseReflectionSummary(obj, input);
+}
+
+export class DeepSeekScoringService implements ScoringService {
+  async submitNote(input: SubmitNoteInput): Promise<SubmitNoteResult> {
+    const obj = await chat(readConfig(), buildSubmitNotePrompt(input));
+    return parseSubmitNote(obj, input.keyword.term);
+  }
+
+  async finalize(input: FinalizeInput): Promise<FinalizeResult> {
+    const obj = await chat(readConfig(), buildFinalizePrompt(input));
+    return parseFinalize(obj);
   }
 
   async updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult> {
@@ -241,10 +475,10 @@ ${formatLearner(input.learner)}
 - 追问与回答：
 ${qa}
 
-【已有标签（在此基础上增量调整，不要凭空抹掉历史）】
+【已有标签】
 ${JSON.stringify(prev)}
 
-【已有画像（在其基础上增量演进，保持结构稳定，便于按行对比变化）】
+【已有画像】
 ${input.learner.memory?.portrait || "（暂无，本次新建）"}
 
 请输出更新后的标签，以及一份 Markdown 画像。画像必须**固定使用以下小节标题与顺序**（内容用「- 」无序列表，空则写「- （暂无）」），以便逐行 diff：
@@ -273,40 +507,177 @@ ${input.learner.memory?.portrait || "（暂无，本次新建）"}
   }
 
   async reflectionQuestions(input: ReflectionQuestionsInput): Promise<string[]> {
-    const cfg = readConfig();
-    const userContent = `员工刚学完一个章节，请生成 2-3 个「结合该员工岗位与实际工作」的反思问题，帮助 ta 把本章知识落到工作中（而不是停留在概念）。
+    // 兜底题：模型偶发返回非法 JSON / 请求失败时，仍给出可用的结合岗位反思题，绝不让整页崩。
+    const fallback = [
+      `结合你的岗位，《${input.chapterTitle}》里最能用上的是哪一点？打算怎么用？`,
+      `本章学完后，你工作中哪个环节可以用这些知识来改进？举一个具体例子。`,
+    ];
+    try {
+      const cfg = readConfig();
+      const userContent = `员工刚学完一个章节，请生成 2-3 个「结合该员工岗位与实际工作」的反思问题，帮助 ta 把本章知识落到工作中（而不是停留在概念）。
 章节：《${input.chapterTitle}》——${input.chapterTheme}
 本章关键词：${input.terms.join("、")}
 ${formatLearner(input.learner)}
 问题要具体、贴合其岗位与应用场景，引导其思考「如何用」「能改进什么」。严格 JSON：{"questions": ["...", "..."]}。只返回 JSON。`;
-    const obj = await chat(cfg, userContent, REFLECTION_SYSTEM_PROMPT);
-    const qs = Array.isArray(obj.questions)
-      ? obj.questions.map((q) => String(q)).filter((q) => q.trim()).slice(0, 3)
-      : [];
-    return qs.length ? qs : [`结合你的岗位，谈谈《${input.chapterTitle}》最能用上的一点。`];
+      const obj = await chat(cfg, userContent, REFLECTION_SYSTEM_PROMPT);
+      const qs = Array.isArray(obj.questions)
+        ? obj.questions.map((q) => String(q)).filter((q) => q.trim()).slice(0, 3)
+        : [];
+      return qs.length ? qs : fallback;
+    } catch (e) {
+      // chat() 已把失败写进 AI 审计日志；这里只兜底，保证反思页可用。
+      console.error("reflectionQuestions 生成失败，使用兜底问题：", e);
+      return fallback;
+    }
   }
 
   async reflectionSummary(input: ReflectionSummaryInput): Promise<ReflectionSummaryResult> {
+    const obj = await chat(
+      readConfig(),
+      buildReflectionSummaryPrompt(input),
+      REFLECTION_SYSTEM_PROMPT,
+    );
+    return parseReflectionSummary(obj, input);
+  }
+
+  async answerQuestion(input: AnswerQuestionInput): Promise<{ answer: string }> {
     const cfg = readConfig();
-    const qa = input.questions
-      .map((q, i) => `问${i + 1}：${q}\n答${i + 1}：${input.answers[i]?.trim() ? input.answers[i] : "（未作答）"}`)
-      .join("\n");
-    const userContent = `根据员工对《${input.chapterTitle}》章节反思的回答，产出：
-1) summary：一段面向该员工的中文章节总结（先肯定、再点出如何把本章用于其岗位、给一个可落地的小建议）。
-2) portrait：在【已有画像】基础上更新的 Markdown 画像，重点补充/丰富「## 与岗位结合」小节，保持其它小节结构稳定，便于逐行对比。
+    const userContent = `${buildAnswerContext(input)}\n严格 JSON：{"answer":"<中文回答>"}。只返回 JSON。`;
+    const obj = await chat(cfg, userContent, QUESTION_SYSTEM_PROMPT);
+    const answer =
+      typeof obj.answer === "string" && obj.answer.trim()
+        ? obj.answer
+        : "抱歉，这个问题我暂时答不上来，换个问法再试试。";
+    return { answer };
+  }
+}
+
+const QUESTION_SYSTEM_PROMPT = `你是 AI 学习平台的答疑助教。员工就刚学完的关键词向你追问，你要结合其笔记、追问回答与岗位背景，给出准确、具体、可落地的中文解答。诚实，不确定就说明。`;
+
+/** 拼装追问提问的上下文（关键词 / 学习者档案 / 本次笔记 / 追问回答 / 历史提问 / 新问题），不含输出格式指令。 */
+function buildAnswerContext(input: AnswerQuestionInput): string {
+  const qa = input.followups
+    .map(
+      (q, i) =>
+        `追问${i + 1}：${q}\n回答${i + 1}：${input.answers[i]?.trim() ? input.answers[i] : "（未作答）"}`,
+    )
+    .join("\n");
+  const history = (input.priorQA ?? [])
+    .map((h, i) => `历史问${i + 1}：${h.question}\n历史答${i + 1}：${h.answer}`)
+    .join("\n");
+  return `员工已通关关键词「${input.keyword.term}」，现在就这个词向你追加提问。请结合下面上下文，针对性回答 ta 的新问题。
+【关键词】
+- 名称：${input.keyword.term}
+- 简介：${input.keyword.description ?? "（无）"}
+- 所在章节主题：${input.keyword.chapterTheme ?? "（无）"}
 ${formatLearner(input.learner)}
-【反思问答】
-${qa}
-【已有画像】
-${input.learner.memory?.portrait || "（暂无）"}
-严格 JSON：{"summary":"...","portrait":"<markdown>"}。只返回 JSON。`;
-    const obj = await chat(cfg, userContent, REFLECTION_SYSTEM_PROMPT);
-    const summary = typeof obj.summary === "string" ? obj.summary : "已完成本章反思。";
-    const portrait =
-      typeof obj.portrait === "string" && obj.portrait.trim()
-        ? obj.portrait
-        : input.learner.memory?.portrait ?? "";
-    return { summary, portrait };
+【该员工本次的笔记】
+${input.note}
+【本次的追问与回答】
+${qa || "（无）"}
+${history ? `【此前的提问与回答】\n${history}\n` : ""}【员工的新问题】
+${input.question}
+
+作答要求：准确、具体、可落地，必要时结合 ta 的岗位与本次笔记里的薄弱点；篇幅适中，不堆砌；不知道就直说。`;
+}
+
+/** 流式回答追问（DeepSeek SSE）。逐段 yield 思考过程 / 正文；结束/失败时写一条 AI 审计日志（归属显式传入）。 */
+export async function* streamAnswerDeepSeek(
+  input: AnswerQuestionInput,
+  trace: AiTrace,
+): AsyncGenerator<AnswerChunk> {
+  const cfg = readConfig();
+  const system = QUESTION_SYSTEM_PROMPT;
+  const userContent = `${buildAnswerContext(input)}\n请用中文直接输出正文，不要用 JSON 或代码块包裹。`;
+  const startedAt = Date.now();
+  let content = "";
+  let reasoning = "";
+  let usage:
+    | {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        total_tokens?: number;
+        completion_tokens_details?: { reasoning_tokens?: number };
+      }
+    | undefined;
+  let errorText: string | undefined;
+
+  try {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.3,
+        stream: true,
+      }),
+    });
+    if (!res.ok || !res.body) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`DeepSeek 接口返回 ${res.status}：${body.slice(0, 200)}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith("data:")) continue;
+        const data = t.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        let json: {
+          choices?: { delta?: { content?: string; reasoning_content?: string } }[];
+          usage?: typeof usage;
+        };
+        try {
+          json = JSON.parse(data);
+        } catch {
+          continue;
+        }
+        const delta = json.choices?.[0]?.delta;
+        if (delta?.reasoning_content) {
+          reasoning += delta.reasoning_content;
+          yield { type: "reasoning", text: delta.reasoning_content };
+        }
+        if (delta?.content) {
+          content += delta.content;
+          yield { type: "answer", text: delta.content };
+        }
+        if (json.usage) usage = json.usage;
+      }
+    }
+    if (!content.trim()) throw new Error("DeepSeek 流式返回为空");
+  } catch (e) {
+    errorText = e instanceof Error ? e.message : String(e);
+    throw e;
+  } finally {
+    await recordAiCallWith(trace, {
+      model: cfg.model,
+      systemPrompt: system,
+      userPrompt: userContent,
+      responseRaw: content || undefined,
+      reasoning: reasoning || undefined,
+      promptTokens: usage?.prompt_tokens,
+      completionTokens: usage?.completion_tokens,
+      reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens,
+      totalTokens: usage?.total_tokens,
+      latencyMs: Date.now() - startedAt,
+      ok: errorText === undefined,
+      errorText,
+    });
   }
 }
 

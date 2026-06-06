@@ -71,12 +71,42 @@ const EMPTY: LearnerMemoryTags = { strengths: [], weaknesses: [], interests: [],
 function splitRefs(s: string | null): string[] {
   return s ? s.split(/[;；]/).map((x) => x.trim()).filter(Boolean) : [];
 }
-/** 按「质量等级 level(0~1)」确定性地造一份笔记：覆盖度与篇幅随 level 增长。 */
-function buildNote(term: string, refs: string[], level: number): string {
-  const covered = refs.slice(0, Math.ceil(refs.length * level));
-  const body = `${term}是一个重要概念。` + covered.map((r) => `关于${r}，我有具体理解。`).join("");
-  const filler = "这里补充更多原理细节、机制说明与实际例子。".repeat(Math.round(level * 40));
-  return body + filler;
+/** 按「质量等级 level(0~1)」确定性地造一份笔记：用真实简介+考核要点，覆盖度随 level 增长。 */
+function buildNote(term: string, description: string | null, refs: string[], level: number): string {
+  const covered = refs.slice(0, Math.max(1, Math.ceil(refs.length * level)));
+  const desc = (description ?? "").trim();
+  const head = desc ? `${term}，${desc}` : `${term} 是这一章里我重点啃的一个概念。`;
+  const points = covered
+    .map((r) => `关于${r}，我查资料后用自己的话理了一遍，能结合一个具体例子说清楚，而不是死记。`)
+    .join("");
+  return `${head}\n我重点弄清了：${points}`;
+}
+
+/** 用关键词真实简介 + 考核要点拼一份像样的同伴笔记（排名/同伴可见性演示，非占位模板）。
+ *  按岗位确定性地选不同口吻，让不同同事的笔记看着各有风格、而非一个模板。 */
+function buildSeedNote(
+  term: string,
+  description: string | null,
+  refs: string[],
+  position: string,
+): string {
+  let v = 0;
+  for (const c of position) v = (v + c.charCodeAt(0)) % 3;
+  const desc = (description ?? "").trim();
+  const lead = [
+    desc ? `${term}，${desc}` : `${term} 是这一章我花时间最多的一个概念。`,
+    desc ? `先记一句话：${term}，${desc}` : `${term} 我反复看了好几遍才算理顺。`,
+    desc ? `${term}。${desc}` : `${term} 乍看简单，真要讲清楚并不容易。`,
+  ][v];
+  const mid = refs.length
+    ? `我重点弄清了这几块：${refs.join("；")}。每一块都对着资料用自己的话讲了一遍，确认没有想当然。`
+    : `我把它的来龙去脉、适用边界和一个典型例子都梳理了一遍。`;
+  const tail = [
+    `结合我做${position}的工作，${term} 的思路能用在实际场景里做判断和取舍，而不是停在背定义。`,
+    `从${position}的角度看，${term} 最有用的是把它的底层逻辑迁移到我手头的问题上。`,
+    `我是做${position}的，${term} 对我的价值在于给了一个想清楚边界与取舍的框架。`,
+  ][v];
+  return `${lead}\n${mid}\n${tail}`;
 }
 function buildAnswer(level: number): string {
   return "我的回答结合了原理与具体例子来展开说明。".repeat(Math.max(1, Math.round(level * 6)));
@@ -115,7 +145,7 @@ async function simulateLearning(
       description: kw.description ?? undefined,
       referencePoints: splitRefs(kw.referencePoints),
     };
-    const note = buildNote(kw.term, scKw.referencePoints, level);
+    const note = buildNote(kw.term, kw.description, scKw.referencePoints, level);
     const { followups } = await scorer.submitNote({ note, keyword: scKw, learner: { profile } });
     const answers = followups.map(() => buildAnswer(level));
     const fin = await scorer.finalize({ note, keyword: scKw, followups, answers, learner: { profile } });
@@ -212,7 +242,7 @@ async function seedChapterCompletion(
       data: {
         userId: u.id,
         keywordId: kw.id,
-        noteText: `从「${profile.position}」的视角看，「${kw.term}」的核心在于其原理、典型应用与边界。我结合实际工作梳理了它的关键要点与一个落地场景，整体约 ${avg} 分水平的学习笔记示例。`,
+        noteText: buildSeedNote(kw.term, kw.description, splitRefs(kw.referencePoints), profile.position),
         status: "COMPLETED",
         finalScore: avg,
         isPassed: true,

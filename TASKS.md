@@ -205,11 +205,52 @@ updateMemory(结构化标签+markdown画像，兴趣项自动贴合岗位)；JSO
 
 ---
 
+## S14 · 体验增补（v1.2）✅（PRD §15）
+- [x] AI 调用审计：`AiCallLog` 表 + 编排层 `AsyncLocalStorage` 归属 + DeepSeek `chat()` 统一记录（提示/推理/返回/用量/耗时/错误）；管理后台 `/admin/ai-logs` 按阶段筛选、逐条展开
+- [x] AI 调用 **token 用量统计**（`/admin/ai-logs` 页首）：总调用 / token 总量（输入·输出·推理）/ 失败 + 按类型（`groupBy(phase)`，占比条）+ 按日（`$queryRaw date_trunc`，近 14 天）；全程「token」全称不用「tok」，千分位
+- [x] **章节反思与单词提交统一风格**：提交反思走流式（Node 路由 `/api/learn/reflect` + `streamReflectionSummaryDeepSeek`），实时 `ThinkingPanel`；小结 reasoning 落库 `ChapterReflection.reasoning` + 旁置「AI 思考过程」`ReasoningDialog`；`thinking.tsx` / `reasoning-dialog.tsx` 提到 `src/components` 共用；删除旧 server action 改流式路由；`reflectionQuestions` 加非法 JSON 兜底（防整页 500）
+- [x] **反思作为「各章冠军」周结算门槛**（PRD §7.2）：`ranking.ts` 结算加「该章反思已完成（截至周末）」过滤；**学习榜不卡反思**（`getLeaderboard` 维持通关即上榜）；完成整章第 20 词后，关键词结果页醒目 CTA 引导去做反思（含「做完才参与周冠军结算」文案）；排行榜文案相应更新
+- [x] 中途退出保留记录：`NoteDraft`（笔记防抖自动保存、预填、提交清除）+ 答追问自动保存到 `Followup.answer`
+- [x] 员工完整答题记录：结果页「本次答题记录」+ 可展开「全部 N 次」归档（无新表）
+- [x] 追问内容依据强化：`Keyword.chapterTheme` 入打分上下文；submitNote 提示显式对照「参考考核要点 + 章节主题 + 本篇笔记」找薄弱点（守 §14.3.1，不写元指令）
+- [x] 同伴笔记空态（完成本词但暂无他人记录时显示「暂无」，刷新后自动出真实数据）；首页排行榜/闯关地图为公开页**示例**并标注（真实排行榜在登录后 `/leaderboard`，数据来自 `pointsLedger`）
+- [x] 管理员也可参与学习：开放 `/learn` `/redeem` `/growth` `/profile` `/onboarding` 给管理员（无资料引导 onboarding，打分上下文降级为通用）
+- [x] 顶栏导航按角色梳理为一致结构（员工：闯关/排行榜/兑换/成长/我的；管理员：管理后台 + 同一套学习侧），后台子页收进「管理后台」首页卡片
+- [x] 同伴笔记演示数据改用关键词真实简介+考核要点+岗位口吻生成，替换「…分水平示例」占位模板
+**验收**：typecheck + lint + 单测 22/22 全绿；真实 DeepSeek 端到端（提交→初评→终评→画像更新）三条审计日志齐全；管理员可进入闯关地图、同伴笔记为真实内容。
+
+---
+
+## S15 · 闯关体验细化（v1.3）✅（PRD §15.6）
+- [x] 字数：笔记 100–2000 字（原 5000 收紧）；追问回答每条 ≤ 1000 字（客户端 maxLength + 计数 + 服务端校验）
+- [x] 初评分在答追问页显著显示（大号品牌色）；答追问时可对照原笔记（折叠面板）
+- [x] 结果页「向 AI 追问」：`LearnerQuestion` 表 + `answerQuestion` 打分契约（DeepSeek/Mock，进 AI 审计 phase=answerQuestion）；结合笔记/追问/历史提问多轮作答，可多次，追加在结果后
+- [x] 长文收纳：`ExpandableText` **默认全部展开**，超过约 3 行才出现「收起 / 展开全文」开关（按钮右下角），用于同伴笔记与答题记录（笔记 + 每条回答）
+- [x] 向 AI 追问**流式输出**：Node 路由 `/api/learn/ask` + DeepSeek SSE（Mock 切片模拟），客户端逐字实时渲染，整段完成后落库，流式调用照样进 AI 审计日志
+- [x] 「同事怎么写的」展示同伴**完整记录**：笔记 + 每条追问与回答（不含对方 AI 反馈）
+- [x] 追问流式带回 DeepSeek **思考过程**（reasoning，NDJSON 区分 reasoning/answer；落库 `LearnerQuestion.reasoning`），生成中实时显示、完成后折叠
+- [x] **Markdown 渲染**（react-markdown + remark-gfm，`.md` 排版）：AI 回答/反馈 + 笔记；`ExpandableText` 支持 markdown（按高度折叠）；按钮补 `cursor:pointer`
+- [x] **提交笔记 / 答追问改流式**（路由 `/api/learn/submit`、`/api/learn/finalize`）：等待时展示 AI 思考过程；JSON 结果只后台解析落库不外泄；`startAttempt`/`completeAttempt` 加 `onReasoning`，`streamSubmitNoteDeepSeek`/`streamFinalizeDeepSeek` 用 `response_format:json_object + stream`；client `router.refresh()` 进下一步（移除原 server action）
+- [x] 答追问页「你的笔记」去掉「答追问时可对照」、改 Markdown + `ExpandableText`；统一思考过程面板高度、`<details>` 转向箭头、反思页 AI 小结改 Markdown（样式/交互一致性）
+- [x] 「同事怎么写的」只展示**得分最高 3 位**
+- [x] 排行榜点进 top10 成员「闯关记录」`/leaderboard/[userId]`：守防抄袭（仅观看者也完成的词解锁笔记/回答，锁住内容服务端不下发，仅在榜可看）
+- [x] 学习榜改按**每词最高分的均分**排名（保留两位小数）而非积分（积分大家差不多）；并列按完成词数；积分仍只用于兑换
+- [x] **每天最多新完成 10 个关键词**（PRD §6.3）：`startAttempt` 服务端拦截 + 写笔记页提示「今天已完成 10 个」；重刷已通过的词、答完已开始的词不受限
+- [x] **初评 / 终评思考过程小弹窗**：流式 reasoning 落库 `Scoring.initialReasoning` / `Scoring.finalReasoning`，分数旁小按钮（shadcn Dialog）回看完整推理——答追问页 / 结果页 / 答题记录每条；Mock / 历史无 reasoning 不显示
+- [x] 所有「展开全文」改为**默认展开**（`ExpandableText` 初值 expanded，测高改为自然全高 vs 折叠阈值）
+- [x] 成长轨迹 / 我的资料「画像全文」改 **Markdown 渲染 + 默认展开**（`ExpandableText markdown`，替换原等宽 `<pre>` 折叠）
+- [x] **成长轨迹入口扩散**：闯关首页头部常驻「画像更新 N 次·看轨迹」入口（有画像才显示）+ 排行榜「我的名次」下「看我的成长轨迹」（原有：顶栏 / 我的资料 / 结果页 / 章节反思小结）
+- [x] **排行榜详情看他人「当前画像」（仅正向公开，不含成长时间线）**：`getPeerRecords` 增 `growth`（强项 + 兴趣 + 隐去短板的画像）；`stripSensitivePortrait` 剔除「待加强/盲区」小节；`/leaderboard/[userId]` 加「当前画像」区（成长轨迹仍仅本人可见）。3 个纯函数单测（共 25 通过）
+- [x] 引入 shadcn/ui（Radix）Select 替换原生下拉（角色 / AI 熟悉度），语义色映射到现有品牌色板；顶栏窄屏改汉堡菜单；修复 chapter/content 移动端网格溢出
+**验收**：typecheck + lint + 单测 22/22 全绿；真实 DeepSeek 跑通「提交→初评→答追问→结果→追问」。
+
+---
+
 ## 状态总览
 
-**全部切片已完成 ✅**（S0–S13 + S2.5/S2.6）。
+**全部切片已完成 ✅**（S0–S14 + S2.5/S2.6）。
 
-实际推进顺序：`S0 → S1 → S2 → S2.5 → S2.6 → S3 → S4 → S5 → S6 → S7 → S8 → S9 → S10 → S11 → S12 → S13`。
+实际推进顺序：`S0 → S1 → S2 → S2.5 → S2.6 → S3 → S4 → S5 → S6 → S7 → S8 → S9 → S10 → S11 → S12 → S13 → S14`。
 
 整体验证：单测 **22/22**、集成测试 **3/3**、`typecheck` + `build`(18 路由) 全绿；碰钱逻辑（兑换、排名）经对抗式审查加固并以运行时 smoke 验证。演示见 `DEMO.md`。
 

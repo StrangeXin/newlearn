@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
+import { runWithAiTrace } from "@/lib/ai-log";
 import { getLearnerContext } from "@/lib/learner";
 import { EMPTY_TAGS, getScoringService, type Keyword } from "@/lib/scoring";
 import { computeMemoryDiff } from "@/lib/memory-diff";
@@ -30,14 +31,23 @@ export async function applyMemoryUpdate(
   const prevTags = ctx.memory?.tags ?? EMPTY_TAGS;
   const prevPortrait = ctx.memory?.portrait ?? "";
 
-  const result = await getScoringService().updateMemory({
-    keyword: params.keyword,
-    note: params.note,
-    followups: params.followups,
-    answers: params.answers,
-    finalScore: params.finalScore,
-    learner: ctx,
-  });
+  const result = await runWithAiTrace(
+    {
+      phase: "updateMemory",
+      userId,
+      keywordId: params.keywordId,
+      keywordTerm: params.keyword.term,
+    },
+    () =>
+      getScoringService().updateMemory({
+        keyword: params.keyword,
+        note: params.note,
+        followups: params.followups,
+        answers: params.answers,
+        finalScore: params.finalScore,
+        learner: ctx,
+      }),
+  );
 
   const diff = computeMemoryDiff(prevTags, result.tags, prevPortrait, result.portrait);
 
