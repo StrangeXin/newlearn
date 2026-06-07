@@ -5,7 +5,7 @@ import {
   CreateSubjectForm,
   ImportContentForm,
   KeywordEditor,
-  SetActiveButton,
+  ToggleActiveButton,
   StartDateForm,
 } from "./content-forms";
 
@@ -17,23 +17,28 @@ function toDateInput(d: Date | null): string {
   return `${x.getFullYear()}-${m}-${day}`;
 }
 
-export default async function AdminContentPage() {
+export default async function AdminContentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
   await requireAdmin();
 
-  const [subjects, cfg] = await Promise.all([
-    prisma.subject.findMany({
-      orderBy: { createdAt: "asc" },
-      include: { _count: { select: { chapters: true } } },
-    }),
-    prisma.activeSubjectConfig.findUnique({
-      where: { singletonId: "GLOBAL" },
-      select: { activeSubjectId: true },
-    }),
-  ]);
-  const activeId = cfg?.activeSubjectId ?? null;
-  const activeSubject = activeId
+  const subjects = await prisma.subject.findMany({
+    orderBy: { createdAt: "asc" },
+    include: { _count: { select: { chapters: true } } },
+  });
+
+  // 可编辑任意学科的内容（不限「当前/活跃」）。默认编辑 URL 指定的学科，
+  // 否则取第一个有章节的学科，便于打开页面就能校对内容。
+  const { edit } = await searchParams;
+  const editId =
+    (edit && subjects.some((s) => s.id === edit) ? edit : null) ??
+    subjects.find((s) => s._count.chapters > 0)?.id ??
+    null;
+  const editSubject = editId
     ? await prisma.subject.findUnique({
-        where: { id: activeId },
+        where: { id: editId },
         include: {
           chapters: {
             orderBy: { index: "asc" },
@@ -53,7 +58,7 @@ export default async function AdminContentPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-extrabold text-ink">学科与内容</h1>
       <p className="mt-1 text-sm text-muted">
-        新建学科后用 JSON 一次导入「5 章 100 词」，再逐词补全简介与考核要点。设为当前学科后员工才能闯关。
+        新建学科后用 JSON 一次导入「5 章 100 词」，再逐词补全简介与考核要点。可同时上线多个学科，员工自由选择学习哪个。
       </p>
 
       <section className="mt-6">
@@ -70,30 +75,46 @@ export default async function AdminContentPage() {
           <div className="card flex flex-col items-center px-6 py-12 text-center">
             <span className="badge badge-muted">还没有学科</span>
             <p className="mt-3 max-w-sm text-sm text-muted">
-              填一个学科名（如「人工智能」），新建后导入章节。
+              填一个学科名（如「人工智能（普及版）」），新建后导入章节。
             </p>
           </div>
         ) : (
           <ul className="card divide-y divide-line p-0">
             {subjects.map((s) => {
-              const isActive = s.id === activeId;
+              const hasContent = s._count.chapters > 0;
+              const isEditing = s.id === editId;
               return (
                 <li
                   key={s.id}
-                  className={`px-4 py-3.5 ${isActive ? "bg-brand-50" : ""}`}
+                  className={`px-4 py-3.5 ${isEditing ? "bg-brand-50" : ""}`}
                 >
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
                       <span className="font-semibold text-ink">{s.title}</span>
+                      {s.isActive && (
+                        <span className="ml-2 badge badge-success">已上线</span>
+                      )}
                       <span className="ml-2 text-xs font-medium text-muted">
-                        {s._count.chapters > 0
-                          ? `${s._count.chapters} 章`
-                          : "未导入内容"}
+                        {hasContent ? `${s._count.chapters} 章` : "未导入内容"}
                       </span>
                     </div>
-                    <SetActiveButton subjectId={s.id} active={isActive} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      {hasContent && !isEditing && (
+                        <Link
+                          href={`/admin/content?edit=${s.id}`}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          校对内容
+                        </Link>
+                      )}
+                      <ToggleActiveButton
+                        subjectId={s.id}
+                        active={s.isActive}
+                        disabled={!hasContent && !s.isActive}
+                      />
+                    </div>
                   </div>
-                  {s._count.chapters === 0 && (
+                  {!hasContent && (
                     <div className="mt-3">
                       <ImportContentForm subjectId={s.id} />
                     </div>
@@ -105,28 +126,31 @@ export default async function AdminContentPage() {
         )}
       </section>
 
-      {activeSubject && (
+      {editSubject && (
         <>
           <section className="card mt-6 p-4">
-            <h2 className="text-lg font-bold text-ink">开课开始日</h2>
+            <h2 className="text-lg font-bold text-ink">
+              开课开始日 · {editSubject.title}
+            </h2>
             <p className="field-hint mb-3 mt-0.5">
-              从这一天所在的自然周（周一到周日）起算，每周顺序解锁一章。
+              从这一天所在的自然周（周一到周日）起算，每周顺序解锁一章。每个学科独立设开始日。
             </p>
-            <StartDateForm value={toDateInput(activeSubject.startDate)} />
+            <StartDateForm
+              subjectId={editSubject.id}
+              value={toDateInput(editSubject.startDate)}
+            />
           </section>
 
           <section className="mt-6">
             <div className="mb-1 flex items-baseline justify-between gap-3">
               <h2 className="text-lg font-bold text-ink">关键词内容</h2>
-              <span className="badge badge-success">
-                ✓ 当前学科 · {activeSubject.title}
-              </span>
+              <span className="badge badge-brand">编辑中 · {editSubject.title}</span>
             </div>
             <p className="field-hint mb-4">
               点开关键词填简介与考核要点。简介对员工可见，考核要点只用来辅助 AI 打分。
             </p>
             <div className="space-y-6">
-              {activeSubject.chapters.map((ch) => {
+              {editSubject.chapters.map((ch) => {
                 const filled = ch.keywords.filter(
                   (kw) => kw.description && kw.referencePoints,
                 ).length;

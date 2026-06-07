@@ -1,0 +1,66 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">人工智能(AI) 手绘配图</title>
+  <desc id="desc">小黑把数据、规则和例子塞进一台学习机器，机器输出判断、识别和对话，旁边镜子提醒像人不等于人。</desc>
+  <rect width="1280" height="720" fill="white"/>
+  <g stroke="#111111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M392 220 C447 184 563 178 627 223 C670 252 683 351 649 402 C598 479 453 472 391 416 C337 368 329 262 392 220Z"/>
+    <path d="M408 238 C462 212 555 207 610 240"/>
+    <path d="M380 328 C431 314 596 313 660 333"/>
+    <path d="M397 414 C461 436 573 432 632 405"/>
+    <path d="M636 270 C691 265 744 284 759 325 C782 386 722 429 647 409"/>
+    <path d="M336 339 C284 331 242 310 208 282"/>
+    <path d="M334 380 C276 392 232 421 194 458"/>
+    <path d="M662 323 C733 311 799 290 849 257"/>
+    <path d="M658 379 C726 392 793 421 854 468"/>
+    <path d="M713 187 L758 217 L741 263 L689 258 L675 209 Z"/>
+    <path d="M714 187 C739 191 752 208 758 217"/>
+    <path d="M735 264 C708 261 692 251 689 258"/>
+    <path d="M900 158 C976 132 1054 155 1086 224 C1117 291 1082 383 998 412 C916 440 836 397 817 319 C798 241 831 180 900 158Z"/>
+    <path d="M846 239 C889 211 967 205 1023 229"/>
+    <path d="M842 343 C910 375 1007 373 1061 330"/>
+    <path d="M935 420 L932 487"/>
+    <path d="M998 414 L1020 479"/>
+    <path d="M900 491 C944 508 992 506 1036 481"/>
+    <path d="M820 519 C878 540 980 548 1058 523"/>
+    <path d="M813 519 C848 570 1009 582 1064 524"/>
+    <path d="M491 469 L485 532"/>
+    <path d="M551 469 L575 531"/>
+    <path d="M452 536 C494 550 550 551 596 531"/>
+    <path d="M155 214 C200 199 256 207 283 240 C307 270 285 311 239 319 C185 329 142 298 139 260 C137 238 144 224 155 214Z"/>
+    <path d="M140 447 C196 431 265 443 292 484 C318 523 279 567 217 564 C160 562 125 527 133 487 C136 470 138 456 140 447Z"/>
+    <path d="M849 245 C878 234 917 231 953 240"/>
+    <path d="M855 468 C900 488 969 504 1034 493"/>
+  </g>
+  <g fill="#111111">
+    <path d="M471 283 C489 250 540 248 562 281 C583 312 567 365 526 372 C481 379 452 320 471 283Z"/>
+    <circle cx="509" cy="304" r="7" fill="white"/>
+    <circle cx="540" cy="304" r="7" fill="white"/>
+    <path d="M493 369 C493 393 486 410 474 426" stroke="#111111" stroke-width="5" stroke-linecap="round"/>
+    <path d="M549 370 C556 393 565 408 582 421" stroke="#111111" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g stroke="#F59E0B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M291 262 C329 276 350 288 380 311"/>
+    <path d="M360 304 L381 312 L369 291"/>
+    <path d="M292 506 C331 481 359 459 388 424"/>
+    <path d="M370 431 L388 424 L382 444"/>
+    <path d="M657 358 C717 349 784 323 835 287"/>
+    <path d="M815 286 L836 287 L824 305"/>
+    <path d="M652 395 C723 424 786 459 846 509"/>
+    <path d="M825 506 L847 509 L836 489"/>
+  </g>
+  <g font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-weight="700">
+    <text x="169" y="254" font-size="36" fill="#2563EB">数据</text>
+    <text x="176" y="505" font-size="36" fill="#2563EB">规则</text>
+    <text x="424" y="181" font-size="32" fill="#F59E0B">找规律</text>
+    <text x="790" y="221" font-size="34" fill="#2563EB">判断</text>
+    <text x="808" y="548" font-size="34" fill="#2563EB">识别 / 对话</text>
+    <text x="894" y="126" font-size="34" fill="#DC2626">像人≠人</text>
+  </g>
+  <g stroke="#111111" stroke-width="4" stroke-linecap="round" opacity="0.75">
+    <path d="M430 276 C420 292 421 326 435 345"/>
+    <path d="M610 277 C622 296 622 340 606 360"/>
+    <path d="M470 520 C511 532 550 530 589 515"/>
+    <path d="M923 253 C939 278 950 318 944 356"/>
+    <path d="M1019 246 C1035 286 1028 337 1004 369"/>
+  </g>
+</svg>

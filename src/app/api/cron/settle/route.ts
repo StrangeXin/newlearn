@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getScheduleInfo } from "@/lib/schedule";
 import { settleChapterWeek } from "@/lib/ranking";
+import { getActiveSubjects } from "@/lib/subject";
 
 function authorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -27,28 +28,32 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
 
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) return NextResponse.json({ ok: true, settled: 0 });
+  // 遍历所有「已上线」学科，各自按其当前周结算到期章节（一次性幂等，重复触发安全）
+  const subjects = await getActiveSubjects();
+  const settled: {
+    subjectId: string;
+    title: string;
+    currentWeek: number;
+    results: { chapter: number; ranked: number }[];
+  }[] = [];
 
-  const subject = await prisma.subject.findUnique({ where: { id: cfg.activeSubjectId } });
-  const { currentWeek } = getScheduleInfo(subject);
+  for (const subject of subjects) {
+    const { currentWeek } = getScheduleInfo(subject);
+    if (currentWeek <= 0) continue; // 未开课的学科跳过
 
-  // 结算所有「周次已到」的章节（index <= 当前周）；一次性幂等，已结算的不会重复发奖
-  const chapters = await prisma.chapter.findMany({
-    where: { subjectId: cfg.activeSubjectId, index: { lte: currentWeek } },
-    orderBy: { index: "asc" },
-  });
-
-  const results: { chapter: number; ranked: number }[] = [];
-  for (const ch of chapters) {
-    const rows = await settleChapterWeek(cfg.activeSubjectId, ch.id, ch.index);
-    results.push({ chapter: ch.index, ranked: rows.length });
+    const chapters = await prisma.chapter.findMany({
+      where: { subjectId: subject.id, index: { lte: currentWeek } },
+      orderBy: { index: "asc" },
+    });
+    const results: { chapter: number; ranked: number }[] = [];
+    for (const ch of chapters) {
+      const rows = await settleChapterWeek(subject.id, ch.id, ch.index);
+      results.push({ chapter: ch.index, ranked: rows.length });
+    }
+    settled.push({ subjectId: subject.id, title: subject.title, currentWeek, results });
   }
 
-  return NextResponse.json({ ok: true, currentWeek, results });
+  return NextResponse.json({ ok: true, subjects: settled });
 }
 
 export const POST = GET;

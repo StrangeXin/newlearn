@@ -1,0 +1,107 @@
+{
+  "index": 3,
+  "title": "AI 怎么\"看懂、听懂、读懂\"·深度学习与感知",
+  "theme": "深度学习让机器能看图、听话、读文、生成内容，还冒出了'世界模型'这种理解世界的新方向——这一章带你扫一遍 AI 的'感官'与'创造力'。",
+  "keywords": [
+    {
+      "term": "计算机视觉(Computer Vision)",
+      "description": "让机器'看懂'图像和视频：认出里面有什么、在哪、是谁。安防、医疗影像、质检都靠它。",
+      "referencePoints": "让机器理解图像/视频内容；涵盖识别、检测、分割等；医疗影像、安防、质检是典型"
+    },
+    {
+      "term": "世界模型(World Model)",
+      "description": "让 AI 不只预测'下一个词'，而是学着预测'世界下一步会怎样'，从而具备对物理世界的理解。2026 大热，是具身智能和视频生成的底层。",
+      "referencePoints": "目标是让 AI 理解并预测世界状态；从'预测词'升级到'预测世界'；支撑具身智能、视频生成、仿真"
+    },
+    {
+      "term": "人脸识别(Face Recognition)",
+      "description": "从图像中认出'这是谁'，广泛用于解锁、门禁、支付；同时也带来隐私与滥用的争议。",
+      "referencePoints": "识别身份的视觉技术；便利与隐私风险并存；多地对其使用有合规限制"
+    },
+    {
+      "term": "语音识别(Speech Recognition)",
+      "description": "把说的话变成文字，是语音输入、会议转写、智能音箱的基础。",
+      "referencePoints": "语音转文字；受口音/噪音影响；是语音交互的第一步"
+    },
+    {
+      "term": "语音合成(Speech Synthesis / TTS)",
+      "description": "把文字变成自然的人声(TTS)，能做 AI 配音、播报，甚至模仿特定人的声音。",
+      "referencePoints": "文字转语音；可定制音色、情感；也带来声音伪造风险"
+    },
+    {
+      "term": "自然语言处理(NLP)",
+      "description": "让机器理解和生成人类语言，是聊天、翻译、摘要、搜索背后的共同基础。大模型就是 NLP 的集大成。",
+      "referencePoints": "让机器懂/生成人话；涵盖理解与生成；大模型是其当代巅峰"
+    },
+    {
+      "term": "机器翻译(Machine Translation)",
+      "description": "在不同语言间自动互译，如今已能做到相当流畅、还能保留语气。",
+      "referencePoints": "跨语言自动互译；当代已较流畅；专业/法律等高风险翻译仍需人校"
+    },
+    {
+      "term": "OCR 文字识别(Optical Character Recognition)",
+      "description": "把图片、扫描件、票据里的文字'抠'成可编辑文本，是文档数字化的入口。",
+      "referencePoints": "把图像里的文字转成文本；是文档数字化入口；票据、证件、表单是常见场景"
+    },
+    {
+      "term": "语义理解(Semantic Understanding)",
+      "description": "让机器抓住一句话'真正的意思'，而不只是字面，比如懂得'这家店不错'是褒义。",
+      "referencePoints": "理解含义而非字面；处理歧义、指代、情感；是高质量问答/检索的前提"
+    },
+    {
+      "term": "生成对抗网络(GAN)",
+      "description": "两个网络互相较劲：一个拼命造假、一个拼命鉴假，越练越逼真。早期 AI 换脸、图像生成就靠它。",
+      "referencePoints": "生成器与判别器对抗训练；能造出逼真假数据；是 AIGC 与深度伪造的早期技术"
+    },
+    {
+      "term": "扩散模型(Diffusion Model)",
+      "description": "如今 AI 画图的主流玩法：先把图打成噪点、再一步步'去噪'还原出想要的图。文生图多用它。",
+      "referencePoints": "通过'去噪'过程生成内容；是当代文生图主流；质量高、可控性强"
+    },
+    {
+      "term": "多模态(Multimodal)",
+      "description": "同时处理文字、图像、声音、视频等多种信息，更接近人'看听读'并用的方式。",
+      "referencePoints": "同时处理多种信息形态；比单模态信息更全；是当代大模型的重要能力"
+    },
+    {
+      "term": "图像生成(Image Generation)",
+      "description": "用一句话描述就能生成图片(文生图)，做海报、设计草图、营销素材又快又省。",
+      "referencePoints": "文字一句话生成图片；大幅提速创意生产；注意版权与真实性"
+    },
+    {
+      "term": "视频生成(Video Generation)",
+      "description": "用文字或图片生成连贯视频(如 Sora)，难在让画面跨帧一致、运动合理。",
+      "referencePoints": "从文本/图片生成视频；难点是时间一致性；与世界模型、仿真相关"
+    },
+    {
+      "term": "数字人(Digital Human)",
+      "description": "AI 驱动的虚拟人物形象，可做主播、客服、讲解，会说会动还能对话。",
+      "referencePoints": "AI 驱动的虚拟形象；用于播报、客服、讲解；结合语音合成与生成技术"
+    },
+    {
+      "term": "自动驾驶(Autonomous Driving)",
+      "description": "让车自己感知路况、做决策、控制行驶。难在现实路况千变万化、容不得出错。",
+      "referencePoints": "感知-决策-控制的闭环；难点是长尾路况与安全；分多个自动化等级"
+    },
+    {
+      "term": "具身智能/机器人(Embodied AI / Robotics)",
+      "description": "给 AI 一个'身体'，让它在真实物理世界里感知和行动，是 2026 的大热方向。",
+      "referencePoints": "强调与物理世界交互；不只'动脑'还要'动手'；依赖世界模型与多模态"
+    },
+    {
+      "term": "时间序列(Time Series)",
+      "description": "随时间变化的数据，如心电、股价、气温。AI 能从它的走势里找规律、做预测。",
+      "referencePoints": "按时间排列的数据；关注趋势与周期；心电、销量、监测是典型"
+    },
+    {
+      "term": "风险预测(Risk Prediction)",
+      "description": "基于历史与当前数据，预测未来发生某事(疾病、违约、故障)的概率，帮人提前防。",
+      "referencePoints": "预测未来事件的概率；服务于提前干预；给的是概率分层而非定论"
+    },
+    {
+      "term": "深度学习改变了什么(What Deep Learning Changed)",
+      "description": "它让机器第一次能自己从原始数据里学出复杂特征，直接引爆了图像、语音、大模型这一轮 AI 浪潮。",
+      "referencePoints": "让机器自动学复杂特征；引爆了现代 AI 的多项突破；是这一轮浪潮的技术起点"
+    }
+  ]
+}

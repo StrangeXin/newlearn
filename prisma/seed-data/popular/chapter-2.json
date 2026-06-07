@@ -1,0 +1,107 @@
+{
+  "index": 2,
+  "title": "AI 怎么\"学\"·机器学习的世界",
+  "theme": "不碰数学，只认识机器'学习'这件事的基本套路：有哪几种学法、会出什么毛病、能干什么不能干什么。",
+  "keywords": [
+    {
+      "term": "监督学习(Supervised Learning)",
+      "description": "给机器一堆'带标准答案'的例子(如'这张是猫、那张是狗')让它学，是最常见的学法。",
+      "referencePoints": "用带标签的数据学习；像'有答案的练习题'；常用于分类与预测"
+    },
+    {
+      "term": "无监督学习(Unsupervised Learning)",
+      "description": "只给数据、不给答案，让机器自己找出里面的结构或分组。",
+      "referencePoints": "用无标签数据找规律；像'自己归纳'；常用于聚类与发现模式"
+    },
+    {
+      "term": "强化学习(Reinforcement Learning)",
+      "description": "让机器在不断试错中学习：做得好给奖励、做得差给惩罚，慢慢学出最优策略。AlphaGo 就是靠它。",
+      "referencePoints": "靠'试错+奖励'学策略；不需要标准答案、只需反馈信号；AlphaGo、机器人控制是典型"
+    },
+    {
+      "term": "分类(Classification)",
+      "description": "判断一个东西'属于哪一类'，比如邮件是不是垃圾、肿瘤是良性还是恶性。",
+      "referencePoints": "输出是离散类别；是监督学习最常见任务；评价看准确率/漏判率"
+    },
+    {
+      "term": "回归/预测(Regression)",
+      "description": "估出一个具体数值，比如预测明天销量、房价、某项指标。",
+      "referencePoints": "输出是连续数值；与分类相对；用历史规律推未来值"
+    },
+    {
+      "term": "聚类(Clustering)",
+      "description": "在没有标签的情况下，把相似的东西自动归成几堆，比如把客户分群。",
+      "referencePoints": "无监督地'物以类聚'；事先不知道有几类/是什么类；常用于客户分群、画像"
+    },
+    {
+      "term": "推荐系统(Recommender System)",
+      "description": "根据你的历史行为猜你可能喜欢什么，电商、短视频、音乐 App 背后都是它。",
+      "referencePoints": "基于行为/相似度做推荐；是 AI 最普及的落地之一；也带来'信息茧房'争议"
+    },
+    {
+      "term": "特征(Feature)",
+      "description": "数据里真正有用的'线索'。挑对特征，模型才学得好——这一步很大程度决定成败。",
+      "referencePoints": "特征=喂给模型的有效信息；选/造特征很关键；垃圾特征→垃圾结果"
+    },
+    {
+      "term": "数据标注(Data Labeling)",
+      "description": "给数据贴上标准答案(如圈出图里的肿瘤)，是监督学习的前提，往往要靠大量人工。",
+      "referencePoints": "标注=给数据贴答案标签；是监督学习的前提；质量直接影响模型、成本高"
+    },
+    {
+      "term": "训练集与测试集(Training & Test Sets)",
+      "description": "把数据分两份：一份给模型'做练习'(训练)、一份留着'考试'(测试)，防止它只会背题。",
+      "referencePoints": "训练集学习、测试集评估；两者要分开不能混；目的是检验真实泛化能力"
+    },
+    {
+      "term": "过拟合(Overfitting)",
+      "description": "模型把训练数据'背'得太死，换了新数据就不会了——好比死记硬背、不会举一反三。",
+      "referencePoints": "过拟合=死记训练数据、不会泛化；表现为'练习很好、考试很差'；要靠更多数据等缓解"
+    },
+    {
+      "term": "准确率(Accuracy)",
+      "description": "衡量模型对了多少的最常用指标。但要警惕：高准确率不一定靠谱(比如漏掉了关键的少数)。",
+      "referencePoints": "准确率=对的比例；它不是唯一指标；不均衡/高风险场景还要看漏判等"
+    },
+    {
+      "term": "数据质量(Data Quality)",
+      "description": "'垃圾进、垃圾出'：数据脏、错、偏，再好的模型也学不出好结果。",
+      "referencePoints": "数据质量决定模型上限；脏数据/错标会带坏模型；清洗与校验很重要"
+    },
+    {
+      "term": "数据偏见(Data Bias)",
+      "description": "如果训练数据本身有偏(如只覆盖某类人群)，AI 就会把这种偏见学进去甚至放大。",
+      "referencePoints": "偏见常源自数据本身；AI 会复制并放大它；在招聘、信贷、医疗尤其要警惕"
+    },
+    {
+      "term": "泛化(Generalization)",
+      "description": "模型在'没见过的新数据'上也能表现好的能力——这才是机器学习真正的目标。学会规律(泛化)而非背下题目(过拟合)，AI 才靠得住。",
+      "referencePoints": "泛化=在新数据上也管用的能力；是机器学习真正的目标；与过拟合相对（学会 vs 背题）；靠训练/测试分离来检验"
+    },
+    {
+      "term": "模式识别(Pattern Recognition)",
+      "description": "从数据里认出重复出现的规律或形态，是很多 AI 任务(识图、识声、找异常)的共同内核。",
+      "referencePoints": "模式识别=找出数据中的规律/形态；是识别类任务的内核；人脸、指纹、语音都属此类"
+    },
+    {
+      "term": "预测分析(Predictive Analytics)",
+      "description": "用历史数据推测未来会发生什么，帮人提前决策，如预测客流、设备故障、复购。",
+      "referencePoints": "用历史推未来；服务于提前决策；预测有不确定性、非铁口直断"
+    },
+    {
+      "term": "异常检测(Anomaly Detection)",
+      "description": "在一堆正常数据里揪出'不对劲'的那个，常用于风控、设备监测、健康预警。",
+      "referencePoints": "异常检测=找出偏离正常的样本；正常样本多、异常少且珍贵；用于风控、监测、预警"
+    },
+    {
+      "term": "机器学习能做什么(What Machine Learning Can Do)",
+      "description": "一句话：凡是'有大量数据、规律藏在里面、且能验证对错'的活，机器学习往往都能帮上忙。",
+      "referencePoints": "适合数据多、有规律、可验证的任务；如分类/预测/识别/推荐；落地要看数据是否到位"
+    },
+    {
+      "term": "机器学习的局限(Limits of Machine Learning)",
+      "description": "它不擅长：没数据的新问题、需要真正理解与常识的事、要求 100% 不能错的场景——这些仍离不开人。",
+      "referencePoints": "缺数据/要常识/零容错的场景是短板；它给的是概率而非保证；高风险场景必须人把关"
+    }
+  ]
+}

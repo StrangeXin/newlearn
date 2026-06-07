@@ -3,9 +3,9 @@
 import { useTransition } from "react";
 import { shiftWeeksAction } from "@/app/actions/admin";
 
-export function ScheduleControls() {
+export function ScheduleControls({ subjectId }: { subjectId: string }) {
   const [pending, start] = useTransition();
-  const shift = (d: number) => start(async () => void (await shiftWeeksAction(d)));
+  const shift = (d: number) => start(async () => void (await shiftWeeksAction(subjectId, d)));
 
   return (
     <div className="flex items-center gap-2">

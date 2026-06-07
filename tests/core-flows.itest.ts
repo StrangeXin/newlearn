@@ -35,9 +35,12 @@ beforeAll(async () => {
   });
   userId = user.id;
 
-  const cfg = await prisma.activeSubjectConfig.findUniqueOrThrow({ where: { singletonId: "GLOBAL" } });
+  const subject = await prisma.subject.findFirstOrThrow({
+    where: { isActive: true, archivedAt: null },
+    orderBy: { createdAt: "asc" },
+  });
   const ch1 = await prisma.chapter.findFirstOrThrow({
-    where: { subjectId: cfg.activeSubjectId!, index: 1 },
+    where: { subjectId: subject.id, index: 1 },
     include: { keywords: { orderBy: { orderIndex: "asc" }, take: 1 } },
   });
   keywordId = ch1.keywords[0].id;

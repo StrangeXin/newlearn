@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { isChapterUnlocked } from "@/lib/schedule";
+import { getActiveSubjectById } from "@/lib/subject";
 import {
   getOrCreateReflection,
   isChapterFullyCompleted,
@@ -14,19 +15,18 @@ import { ReflectForm } from "./reflect-form";
 export default async function ReflectPage({
   params,
 }: {
-  params: Promise<{ index: string }>;
+  params: Promise<{ subjectId: string; index: string }>;
 }) {
-  const { index } = await params;
+  const { subjectId, index } = await params;
   const chapterIndex = Number.parseInt(index, 10);
   const user = await requireUser();
 
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) redirect("/learn");
+  const subject = await getActiveSubjectById(subjectId);
+  if (!subject) redirect("/learn");
+  const chapterHref = `/learn/${subject.id}/chapter/${chapterIndex}`;
+
   const chapter = await prisma.chapter.findFirst({
-    where: { subjectId: cfg.activeSubjectId, index: chapterIndex },
+    where: { subjectId: subject.id, index: chapterIndex },
     include: { subject: { select: { startDate: true } } },
   });
   if (!chapter) notFound();
@@ -37,7 +37,7 @@ export default async function ReflectPage({
     return (
       <main className="animate-float-in page-narrow py-8">
         <Link
-          href={`/learn/chapter/${chapter.index}`}
+          href={chapterHref}
           className="text-sm font-medium text-muted transition hover:text-brand-700"
         >
           ← 返回章节
@@ -50,7 +50,7 @@ export default async function ReflectPage({
           <p className="mt-2 max-w-sm leading-relaxed text-muted">
             通关《{chapter.title}》全部 20 个关键词后，会出现一组结合你岗位的反思题。
           </p>
-          <Link href={`/learn/chapter/${chapter.index}`} className="btn btn-primary mt-6">
+          <Link href={chapterHref} className="btn btn-primary mt-6">
             回到本章继续闯关
           </Link>
         </div>
@@ -63,7 +63,7 @@ export default async function ReflectPage({
   return (
     <main className="animate-float-in page-narrow py-8">
       <Link
-        href={`/learn/chapter/${chapter.index}`}
+        href={chapterHref}
         className="text-sm font-medium text-muted transition hover:text-brand-700"
       >
         ← 返回章节

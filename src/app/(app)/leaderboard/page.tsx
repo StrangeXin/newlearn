@@ -3,25 +3,30 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { getChapterWinners, getLeaderboard } from "@/lib/social";
+import { getActiveSubjects } from "@/lib/subject";
+import { SubjectTabs } from "@/components/subject-tabs";
 
 const medal = ["🥇", "🥈", "🥉"];
 
-export default async function LeaderboardPage() {
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subject?: string }>;
+}) {
   const user = await requireUser();
   if (user.role === "EMPLOYEE") {
     const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
     if (!profile) redirect("/onboarding");
   }
 
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    include: { activeSubject: { select: { title: true } } },
-  });
-  if (!cfg?.activeSubjectId) redirect("/learn");
+  const subjects = await getActiveSubjects();
+  if (subjects.length === 0) redirect("/learn");
+  const { subject: requested } = await searchParams;
+  const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
 
   const [leaders, winners] = await Promise.all([
-    getLeaderboard(cfg.activeSubjectId),
-    getChapterWinners(cfg.activeSubjectId),
+    getLeaderboard(subject.id),
+    getChapterWinners(subject.id),
   ]);
 
   const myRow = leaders.find((r) => r.userId === user.id);
@@ -29,11 +34,12 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="page py-8">
+      <SubjectTabs subjects={subjects} activeId={subject.id} basePath="/leaderboard" />
       <div className="animate-float-in flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">排行榜</h1>
           <p className="mt-1.5 text-muted">
-            {cfg.activeSubject?.title} · 按每个词最高分的平均分排名，写得越好排得越前。
+            {subject.title} · 按每个词最高分的平均分排名，写得越好排得越前。
           </p>
         </div>
         {myRow ? (
@@ -90,7 +96,7 @@ export default async function LeaderboardPage() {
               return (
                 <li key={r.userId} className="border-b border-line last:border-b-0">
                   <Link
-                    href={`/leaderboard/${r.userId}`}
+                    href={`/leaderboard/${r.userId}?subject=${subject.id}`}
                     className={`flex items-center justify-between gap-3 px-3 py-3 transition hover:bg-surface-2 sm:px-4 ${
                       isMe ? "bg-brand-50" : isFirst ? "bg-accent-100/45" : ""
                     }`}

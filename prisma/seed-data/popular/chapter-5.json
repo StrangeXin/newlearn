@@ -1,0 +1,107 @@
+{
+  "index": 5,
+  "title": "智能体、应用前沿与 AI 安全",
+  "theme": "AI 正在从'会聊天'走向'会干活'(智能体)，在各行业落地，也带来隐私、安全、伦理这些必须守住的底线。",
+  "keywords": [
+    {
+      "term": "AI 智能体(Agent)",
+      "description": "会自己拆解目标、调用工具、一步步把事办完的 AI。2026 被称为'智能体落地元年'，它能自主执行多步任务，是 AI 的下一个形态。",
+      "referencePoints": "能自主规划并调用工具完成多步任务；比一问一答更进一步；2026 是其落地元年"
+    },
+    {
+      "term": "AI 副驾驶(Copilot)",
+      "description": "嵌在你已经在用的软件里(文档、表格、编程工具)的 AI 助手，随手帮你补全、起草、解释。",
+      "referencePoints": "嵌入现有软件的助手；定位是'辅助'你而非替代；降低使用门槛"
+    },
+    {
+      "term": "检索增强(RAG)",
+      "description": "让 AI 先去查你给的资料、再据此回答，从而能基于私有/最新知识答题、少胡说。",
+      "referencePoints": "先检索资料再生成；能接私有/最新知识；显著减少幻觉"
+    },
+    {
+      "term": "企业知识库问答(Enterprise Knowledge Base QA)",
+      "description": "把公司制度、产品手册、资料喂给 AI，员工一问就能精准查到'原文原话'。",
+      "referencePoints": "公司资料的智能问答；秒级查到原文；新人上手与查档利器"
+    },
+    {
+      "term": "工具调用(Tool Use)",
+      "description": "让 AI 能去用工具：查数据库、算数、发邮件、下单，从'只会说'变成'能办事'。",
+      "referencePoints": "让 AI 调用外部工具/接口；突破自身能力边界；是智能体能'办事'的关键"
+    },
+    {
+      "term": "知识图谱(Knowledge Graph)",
+      "description": "把知识连成'实体—关系'的网络(谁属于谁、什么导致什么)，让 AI 能顺着关系做推理。",
+      "referencePoints": "用实体与关系组织知识；支持顺关系推理；适合规则/指南类强结构知识"
+    },
+    {
+      "term": "数字孪生(Digital Twin)",
+      "description": "给现实里的东西(设备、器官、流程)建一个随真实数据同步的'数字副本'，用来仿真和预测。",
+      "referencePoints": "现实实体的虚拟副本；随真实数据同步更新；可仿真、预测、做'假如'推演"
+    },
+    {
+      "term": "AI 辅助诊断(AI-Assisted Diagnosis，辅助非替代)",
+      "description": "AI 帮医生看片、看数据、提示风险，但最终诊断由医生定。它是'超级助手'，不是决策者。",
+      "referencePoints": "AI 辅助、医生拍板；定位是超级助手非替代；医疗强调高准确、人在环"
+    },
+    {
+      "term": "AI 在医疗健康(AI in Healthcare)",
+      "description": "从影像识别、辅助诊断到随访提醒、健康管理，AI 正广泛进入医疗，但始终在医生监督下。",
+      "referencePoints": "覆盖影像、诊断、随访、健管；价值是提效降漏诊；须合规且医生把关"
+    },
+    {
+      "term": "AI 私有化部署(On-Premise / Private Deployment)",
+      "description": "把 AI 装在自己可控的环境里、数据不出门，是医疗、金融等强隐私行业的硬要求。",
+      "referencePoints": "数据不出本地边界；满足隐私与合规；医疗/金融的常见选择"
+    },
+    {
+      "term": "边缘 AI(Edge AI)",
+      "description": "让 AI 直接跑在设备端(仪器、手机、网关)，断网也能用、响应快、更护隐私。",
+      "referencePoints": "推理跑在设备端；低延迟、可离线、护隐私；与云端协同"
+    },
+    {
+      "term": "AI 落地的难点(Challenges of AI Adoption)",
+      "description": "真正难的往往不是技术，而是能不能融进现有流程、员工信不信任、数据隐私够不够稳。",
+      "referencePoints": "三大坎：嵌入流程、员工信任、数据安全；技术常不是瓶颈；落地要陪跑"
+    },
+    {
+      "term": "数据隐私(Data Privacy)",
+      "description": "个人信息、客户与患者数据不能随便外泄或被乱用，这是用 AI 的底线之一。",
+      "referencePoints": "保护个人/客户/患者信息；不得随意外泄或滥用；是用 AI 的红线"
+    },
+    {
+      "term": "AI 安全(AI Safety)",
+      "description": "防止 AI 被'越狱'诱导、被对抗手段欺骗或被恶意利用，靠红队测试和'护栏'来兜底。",
+      "referencePoints": "防越狱、对抗攻击、滥用；靠红队与护栏防护；能力越强越要重视"
+    },
+    {
+      "term": "深度伪造(Deepfake)",
+      "description": "用 AI 伪造以假乱真的视频/语音/图像，可能被用于诈骗、造谣，需要学会辨识和防范。",
+      "referencePoints": "AI 伪造逼真音视频；可被用于诈骗造谣；要会辨识、防范、留证"
+    },
+    {
+      "term": "AI 偏见与公平(AI Bias & Fairness)",
+      "description": "AI 可能把数据里的歧视学进去并放大，在招聘、信贷、医疗等场景要特别防止不公。",
+      "referencePoints": "偏见源自数据、会被放大；高风险场景要查公平；需检测与纠偏"
+    },
+    {
+      "term": "AI 治理与监管(AI Governance & Regulation)",
+      "description": "各国正用法律和规范给 AI 划边界(能做什么、不能做什么)，企业出海/落地都要看合规。",
+      "referencePoints": "用法律法规给 AI 划边界；各地监管取向不同；落地与出海都涉合规"
+    },
+    {
+      "term": "AI 伦理(AI Ethics)",
+      "description": "AI 该透明、可问责、向善、不伤害。技术能做，不代表就该做。",
+      "referencePoints": "透明、问责、向善、不伤害；'能做'不等于'该做'；是落地的价值底线"
+    },
+    {
+      "term": "AI 对工作的影响(AI's Impact on Jobs)",
+      "description": "AI 更多是增强而非简单取代——重复的活被接管，会用 AI 的人更值钱。关键是学会与它协作。",
+      "referencePoints": "更多是增强而非取代；重复劳动易被接管；会用 AI 者更有竞争力"
+    },
+    {
+      "term": "AI 的未来趋势(Future Trends of AI)",
+      "description": "智能体规模化落地、多模态与世界模型、端侧小模型、AI 与各行业深度融合，是接下来的主线。",
+      "referencePoints": "智能体落地、多模态/世界模型、端侧化、行业融合；趋势是更自主更普及；要持续学习"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { getPeerRecords } from "@/lib/social";
+import { getActiveSubjects } from "@/lib/subject";
 import { ExpandableText } from "@/components/expandable-text";
 
 function PeerChips({ items, badge }: { items: string[]; badge: string }) {
@@ -20,8 +21,10 @@ function PeerChips({ items, badge }: { items: string[]; badge: string }) {
 
 export default async function PeerRecordsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ userId: string }>;
+  searchParams: Promise<{ subject?: string }>;
 }) {
   const { userId } = await params;
   const me = await requireUser();
@@ -30,14 +33,14 @@ export default async function PeerRecordsPage({
     if (!profile) redirect("/onboarding");
   }
 
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) redirect("/learn");
+  const subjects = await getActiveSubjects();
+  if (subjects.length === 0) redirect("/learn");
+  const { subject: requested } = await searchParams;
+  const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
+  const backHref = `/leaderboard?subject=${subject.id}`;
 
-  const data = await getPeerRecords(me.id, userId, cfg.activeSubjectId);
-  if (!data) redirect("/leaderboard");
+  const data = await getPeerRecords(me.id, userId, subject.id);
+  if (!data) redirect(backHref);
 
   const isMe = userId === me.id;
   const locked = data.totalCompleted - data.unlockedCount;
@@ -45,7 +48,7 @@ export default async function PeerRecordsPage({
   return (
     <main className="page-narrow py-8">
       <Link
-        href="/leaderboard"
+        href={backHref}
         className="text-sm font-medium text-muted transition hover:text-brand-700"
       >
         ← 排行榜

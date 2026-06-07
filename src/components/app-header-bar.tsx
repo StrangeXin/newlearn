@@ -24,7 +24,7 @@ export function AppHeaderBar({
   const close = () => setOpen(false);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md print:hidden">
       <div className="page flex items-center justify-between gap-3 py-3">
         <Link
           href="/"

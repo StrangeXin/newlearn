@@ -3,25 +3,30 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
 import { getChapterRanking } from "@/lib/ranking";
+import { getActiveSubjects } from "@/lib/subject";
+import { SubjectTabs } from "@/components/subject-tabs";
 import { SettleButton } from "./settle-button";
 
 const medal = ["🥇", "🥈", "🥉"];
 
-export default async function AdminRankingsPage() {
+export default async function AdminRankingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subject?: string }>;
+}) {
   await requireAdmin();
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) redirect("/admin");
+  const subjects = await getActiveSubjects();
+  if (subjects.length === 0) redirect("/admin");
+  const { subject: requested } = await searchParams;
+  const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
 
   const chapters = await prisma.chapter.findMany({
-    where: { subjectId: cfg.activeSubjectId },
+    where: { subjectId: subject.id },
     orderBy: { index: "asc" },
   });
 
   const rankings = await Promise.all(
-    chapters.map((ch) => getChapterRanking(cfg.activeSubjectId!, ch.id, ch.index)),
+    chapters.map((ch) => getChapterRanking(subject.id, ch.id, ch.index)),
   );
 
   // 概览：已结算的章数、已入榜人次、已发 +100 的人次（仅读已结算数据，不触发结算）
@@ -41,9 +46,10 @@ export default async function AdminRankingsPage() {
         ← 管理后台
       </Link>
       <h1 className="mt-3 text-2xl font-extrabold text-ink">章节排名结算</h1>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">
-        完成本章全部 20 词的员工才入榜，按 20 词均分排序。前 3 名各得 +100，并列同样各给 +100（不稀释、不限人数）。结算一次性，重复点不会重复发奖。
+      <p className="mt-1.5 mb-4 text-sm leading-relaxed text-muted">
+        {subject.title} · 完成本章全部 20 词的员工才入榜，按 20 词均分排序。前 3 名各得 +100，并列同样各给 +100（不稀释、不限人数）。结算一次性，重复点不会重复发奖。
       </p>
+      <SubjectTabs subjects={subjects} activeId={subject.id} basePath="/admin/rankings" />
 
       <div className="mt-5 grid grid-cols-3 gap-3 sm:max-w-md">
         <div className="card p-3.5">

@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   createSubjectAction,
   importSubjectContentAction,
-  setActiveSubjectAction,
+  toggleSubjectActiveAction,
   setStartDateAction,
   updateKeywordAction,
   type AdminState,
@@ -12,27 +12,44 @@ import {
 
 const initial: AdminState = {};
 
-export function SetActiveButton({ subjectId, active }: { subjectId: string; active: boolean }) {
+/** 上线 / 下线学科（可同时上线多个）。下线后员工侧不再可见。 */
+export function ToggleActiveButton({
+  subjectId,
+  active,
+  disabled,
+}: {
+  subjectId: string;
+  active: boolean;
+  disabled?: boolean;
+}) {
   const [pending, start] = useTransition();
-  if (active) {
-    return <span className="badge badge-success">✓ 当前学科</span>;
-  }
+  const [err, setErr] = useState("");
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() => start(async () => void (await setActiveSubjectAction(subjectId)))}
-      className="btn btn-secondary btn-sm"
-    >
-      设为当前
-    </button>
+    <span className="flex items-center gap-2">
+      {err && <span className="field-error">{err}</span>}
+      <button
+        type="button"
+        disabled={pending || disabled}
+        onClick={() =>
+          start(async () => {
+            const r = await toggleSubjectActiveAction(subjectId, !active);
+            setErr(r?.error ?? "");
+          })
+        }
+        className={active ? "btn btn-danger btn-sm" : "btn btn-primary btn-sm"}
+        title={disabled ? "先导入章节内容再上线" : undefined}
+      >
+        {active ? "下线" : "上线"}
+      </button>
+    </span>
   );
 }
 
-export function StartDateForm({ value }: { value: string }) {
+export function StartDateForm({ subjectId, value }: { subjectId: string; value: string }) {
   const [state, action, pending] = useActionState(setStartDateAction, initial);
   return (
     <form action={action} className="flex flex-wrap items-end gap-2">
+      <input type="hidden" name="subjectId" value={subjectId} />
       <input type="date" name="startDate" defaultValue={value} className="input w-auto" />
       <button type="submit" disabled={pending} className="btn btn-primary">
         保存开始日

@@ -14,6 +14,13 @@ import type { Prisma } from "@/generated/prisma/client";
 /** 单笔兑换金额上限（兼顾 Int32 与业务合理性）。 */
 export const MAX_REDEEM_AMOUNT = 100_000;
 
+/** 报销凭证文件（截图/PDF）；由 action 校验类型与大小后传入。 */
+export interface RedemptionAttachmentInput {
+  fileName: string;
+  mimeType: string;
+  data: Uint8Array;
+}
+
 type Tx = Prisma.TransactionClient;
 
 /** 对 (userId, subjectId) 账户加事务级 advisory 锁，串行化同账户的申请/审批。 */
@@ -71,7 +78,7 @@ export async function requestRedemption(
   subjectId: string,
   item: string,
   amount: number,
-  attachment?: string,
+  attachment?: RedemptionAttachmentInput,
 ): Promise<void> {
   const trimmedItem = item.trim();
   if (!trimmedItem) throw new Error("请填写兑换的物品 / 工具");
@@ -89,15 +96,20 @@ export async function requestRedemption(
     if (amount > available) {
       throw new Error(`可用积分不足（当前可用 ${available}，含已占用的待审批申请）`);
     }
-    await tx.redemption.create({
-      data: {
-        userId,
-        subjectId,
-        item: trimmedItem,
-        amount,
-        attachment: attachment?.trim() || null,
-      },
+    const redemption = await tx.redemption.create({
+      data: { userId, subjectId, item: trimmedItem, amount },
     });
+    if (attachment) {
+      await tx.redemptionAttachment.create({
+        data: {
+          redemptionId: redemption.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          size: attachment.data.byteLength,
+          data: Buffer.from(attachment.data),
+        },
+      });
+    }
   });
 }
 

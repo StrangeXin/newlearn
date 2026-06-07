@@ -1,13 +1,29 @@
 import Link from "next/link";
 
-// 「人工智能」学科的 5 章 + 闯关状态：作为 Hero 的闯关地图预览
+// 「人工智能（普及版）」的 5 章 + 闯关状态：作为 Hero 的闯关地图预览
 const chapters = [
-  { title: "起源与数学", theme: "图灵机、感知机到概率与线代", state: "done" },
-  { title: "经典机器学习", theme: "回归、决策树、SVM、特征工程", state: "done" },
-  { title: "深度学习", theme: "神经网络、CNN、RNN、反向传播", state: "open" },
-  { title: "大模型时代", theme: "Transformer、预训练、RLHF、提示工程", state: "locked" },
-  { title: "前沿与治理", theme: "Agent、多模态、对齐、AI 安全", state: "locked" },
+  { title: "AI 是什么·从哪来", theme: "它是什么、不是什么、从哪来、靠什么跑", state: "done" },
+  { title: "机器学习的世界", theme: "几种学法、会犯什么错、能干什么", state: "done" },
+  { title: "深度学习与感知", theme: "看图、听话、读文、生成内容", state: "open" },
+  { title: "大模型与生成式 AI", theme: "大模型怎么教出来、又怎么用好", state: "locked" },
+  { title: "智能体与 AI 安全", theme: "从会聊天到会干活，落地与风险", state: "locked" },
 ] as const;
+
+// 两个 AI 版本的章节短标题（学科区块的章节胶囊用）
+const popularChapters = [
+  "AI 是什么·从哪来",
+  "机器学习的世界",
+  "深度学习与感知",
+  "大模型与生成式 AI",
+  "智能体与 AI 安全",
+];
+const proChapters = [
+  "起源与数学基石",
+  "经典机器学习",
+  "深度学习的崛起",
+  "Transformer 与大模型",
+  "智能体与私有化落地",
+];
 
 // 麦肯锡进入陌生行业的三个动作（纯方法论，不强行映射平台功能）
 const method = [
@@ -156,7 +172,7 @@ export default function Home() {
             <div className="card p-5 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="badge badge-brand">人工智能</span>
+                  <span className="badge badge-brand">人工智能·普及版</span>
                   <span className="text-xs text-muted">5 章 · 100 词</span>
                 </div>
                 <span className="flex items-center gap-2">
@@ -358,15 +374,15 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* 右列两块：积分兑换 + 个性化 */}
-              <div className="grid content-start gap-5">
-                <div className="card p-6">
+              {/* 右列两块：积分兑换 + 个性化（桌面端平分列高，与左侧排行榜卡片底部对齐） */}
+              <div className="flex flex-col gap-5">
+                <div className="card flex flex-col justify-center p-6 lg:flex-1">
                   <h3 className="text-lg font-bold text-ink">1 积分 = 1 元报销</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
                     学完的每个词都能换报销额度，可多次部分兑换。员工申请、管理员审批后到账。
                   </p>
                 </div>
-                <div className="card p-6">
+                <div className="card flex flex-col justify-center p-6 lg:flex-1">
                   <h3 className="text-lg font-bold text-ink">AI 越学越懂你</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
                     填一次资料，系统生成画像并持续更新。追问会结合你的岗位，不是套用通用模板。
@@ -377,54 +393,63 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 学科：AI 已开课（左大）+ 其余（右列），非等大网格 */}
+        {/* 学科：同一门 AI 的两个版本（普及版 / 专业版）并列 + 更多主题占位 */}
         <section id="subjects" className="scroll-mt-20 border-y border-line bg-surface-2">
           <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-bold text-ink sm:text-3xl">不止 AI 一门</h2>
+              <h2 className="text-2xl font-bold text-ink sm:text-3xl">同一门 AI，两个深度</h2>
               <p className="mt-3 leading-relaxed text-muted">
-                每个学科都是 5 章 100 词，从起源到前沿。管理员开哪门，你就学哪门。
+                普及版面向全员，零数学认识 AI 的来龙去脉；专业版面向工程师，深入到 Transformer、RAG 与私有化落地。按你的基础挑一个，也可以两个都学。
               </p>
             </div>
 
-            <div className="mt-10 grid gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:gap-6">
+            <div className="mt-10 grid gap-5 lg:grid-cols-2 lg:gap-6">
               <div className="card flex flex-col p-6 lg:p-7">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-xl font-extrabold text-ink">人工智能</h3>
+                  <h3 className="text-xl font-extrabold text-ink">人工智能（普及版）</h3>
                   <span className="badge badge-success shrink-0">已开课</span>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
-                  从图灵机到大模型 Agent，AI 这几十年的脉络完整走一遍。
+                  面向全员，不碰数学。从 AI 是什么、机器怎么学，到大模型与智能体，把这轮 AI 浪潮的来龙去脉讲清楚。
                 </p>
                 <ul className="mt-5 flex flex-wrap gap-2">
-                  {chapters.map((c) => (
+                  {popularChapters.map((title) => (
                     <li
-                      key={c.title}
+                      key={title}
                       className="rounded-lg bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink"
                     >
-                      {c.title}
+                      {title}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="grid content-start gap-5">
-                <div className="card p-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-bold text-ink">心电高频QRS</h3>
-                    <span className="badge badge-muted shrink-0">即将开放</span>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    分析 QRS 波内的高频成分，比常规 ST 段更早捕捉心肌缺血的信号。
-                  </p>
+              <div className="card flex flex-col p-6 lg:p-7">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-xl font-extrabold text-ink">人工智能（专业版）</h3>
+                  <span className="badge badge-success shrink-0">已开课</span>
                 </div>
-                <div className="card border-dashed p-6">
-                  <h3 className="text-lg font-bold text-ink">更多主题</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    心理学、医学、管理…… 任何能拆成 100 个关键词的领域，都能开成一门课。
-                  </p>
-                </div>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  面向工程师。从数学地基、经典机器学习到 Transformer、RAG、智能体与私有化落地，按工程视角深入一遍。
+                </p>
+                <ul className="mt-5 flex flex-wrap gap-2">
+                  {proChapters.map((title) => (
+                    <li
+                      key={title}
+                      className="rounded-lg bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink"
+                    >
+                      {title}
+                    </li>
+                  ))}
+                </ul>
               </div>
+            </div>
+
+            <div className="card mt-5 border-dashed p-6 lg:mt-6">
+              <h3 className="text-lg font-bold text-ink">更多主题</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+                医学、心理学、管理…… 任何能拆成 100 个关键词的领域，都能开成一门课。
+              </p>
             </div>
           </div>
         </section>

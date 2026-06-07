@@ -53,3 +53,17 @@ export function isChapterUnlocked(
   const { started, currentWeek } = getScheduleInfo(subject, now);
   return started && index <= currentWeek;
 }
+
+/**
+ * 统一进度的「学习/培训/奖励周期」是否已结束：已开课且当前周已越过最后一章
+ * （currentWeek > 章节数）。此后所有章节恒为解锁状态，仅供**补学**——补学照常
+ * 记基础积分，但当周排名早已结算、不再参与（迟到不补，见 ranking.ts 时间窗）。
+ */
+export function isCycleEnded(
+  subject: { startDate: Date | null } | null,
+  totalChapters: number,
+  now: Date = new Date(),
+): boolean {
+  const { started, currentWeek } = getScheduleInfo(subject, now);
+  return started && totalChapters > 0 && currentWeek > totalChapters;
+}

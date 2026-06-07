@@ -3,13 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
 import { isChapterUnlocked } from "@/lib/schedule";
+import { getActiveSubjectById } from "@/lib/subject";
 
 export default async function ChapterPage({
   params,
 }: {
-  params: Promise<{ index: string }>;
+  params: Promise<{ subjectId: string; index: string }>;
 }) {
-  const { index } = await params;
+  const { subjectId, index } = await params;
   const chapterIndex = Number.parseInt(index, 10);
   const user = await requireUser();
 
@@ -18,14 +19,12 @@ export default async function ChapterPage({
     if (!profile) redirect("/onboarding");
   }
 
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) redirect("/learn");
+  const subject = await getActiveSubjectById(subjectId);
+  if (!subject) redirect("/learn");
+  const mapHref = `/learn/${subject.id}`;
 
   const chapter = await prisma.chapter.findFirst({
-    where: { subjectId: cfg.activeSubjectId, index: chapterIndex },
+    where: { subjectId: subject.id, index: chapterIndex },
     include: {
       keywords: { orderBy: { orderIndex: "asc" } },
       subject: { select: { startDate: true } },
@@ -36,7 +35,7 @@ export default async function ChapterPage({
   if (!isChapterUnlocked(chapter.subject, chapter.index)) {
     return (
       <main className="animate-float-in page py-8">
-        <Link href="/learn" className="text-sm font-medium text-muted transition hover:text-brand-700">
+        <Link href={mapHref} className="text-sm font-medium text-muted transition hover:text-brand-700">
           ← 闯关地图
         </Link>
         <div className="card mt-6 flex flex-col items-center px-6 py-14 text-center">
@@ -47,7 +46,7 @@ export default async function ChapterPage({
           <p className="mt-2 max-w-sm text-muted">
             每周开放一关，第 {chapter.index} 周才解锁。先把已开放的关卡通关。
           </p>
-          <Link href="/learn" className="btn btn-primary mt-6">
+          <Link href={mapHref} className="btn btn-primary mt-6">
             回到闯关地图
           </Link>
         </div>
@@ -75,7 +74,7 @@ export default async function ChapterPage({
 
   return (
     <main className="animate-float-in page py-8">
-      <Link href="/learn" className="text-sm font-medium text-muted transition hover:text-brand-700">
+      <Link href={mapHref} className="text-sm font-medium text-muted transition hover:text-brand-700">
         ← 闯关地图
       </Link>
 
@@ -124,7 +123,7 @@ export default async function ChapterPage({
 
       {allDone && (
         <Link
-          href={`/learn/chapter/${chapter.index}/reflect`}
+          href={`${mapHref}/chapter/${chapter.index}/reflect`}
           className="card-link mt-4 flex items-center justify-between gap-3 p-4"
         >
           <div className="flex items-center gap-3">

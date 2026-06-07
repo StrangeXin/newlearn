@@ -6,6 +6,8 @@ import {
   getPendingRedeemTotal,
   getSubjectBalance,
 } from "@/lib/redemption";
+import { getActiveSubjects } from "@/lib/subject";
+import { SubjectTabs } from "@/components/subject-tabs";
 import { RedeemForm } from "./redeem-form";
 
 const statusLabel: Record<string, { text: string; cls: string }> = {
@@ -14,19 +16,22 @@ const statusLabel: Record<string, { text: string; cls: string }> = {
   REJECTED: { text: "已驳回", cls: "badge badge-danger" },
 };
 
-export default async function RedeemPage() {
+export default async function RedeemPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subject?: string }>;
+}) {
   const user = await requireUser();
 
   // 任何角色都可参与学习与兑换；无资料先去 onboarding
   const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
   if (!profile) redirect("/onboarding");
 
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    include: { activeSubject: true },
-  });
-  if (!cfg?.activeSubjectId) redirect("/learn");
-  const subjectId = cfg.activeSubjectId;
+  const subjects = await getActiveSubjects();
+  if (subjects.length === 0) redirect("/learn");
+  const { subject: requested } = await searchParams;
+  const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
+  const subjectId = subject.id;
 
   const [balance, pending, available, redemptions] = await Promise.all([
     getSubjectBalance(user.id, subjectId),
@@ -35,6 +40,7 @@ export default async function RedeemPage() {
     prisma.redemption.findMany({
       where: { userId: user.id, subjectId },
       orderBy: { createdAt: "desc" },
+      include: { attachmentFile: { select: { id: true } } },
     }),
   ]);
 
@@ -48,10 +54,17 @@ export default async function RedeemPage() {
 
   return (
     <main className="page-narrow py-8">
+      <SubjectTabs subjects={subjects} activeId={subjectId} basePath="/redeem" />
       <div className="animate-float-in">
         <h1 className="text-2xl font-extrabold text-ink">积分兑换</h1>
         <p className="mt-1 text-sm text-muted">
           1 积分 = 1 元，可多次兑换书或工具。
+          {subjects.length > 1 && (
+            <>
+              {" "}积分按学科隔离，当前为
+              <span className="font-semibold text-accent-700">{subject.title}</span>。
+            </>
+          )}
         </p>
       </div>
 
@@ -86,7 +99,7 @@ export default async function RedeemPage() {
         <p className="mb-4 mt-1 text-sm text-muted">
           提交后由管理员审批。审批期间金额冻结，通过后扣分。
         </p>
-        <RedeemForm available={available} />
+        <RedeemForm available={available} subjectId={subjectId} />
       </section>
 
       <section className="mt-8">
@@ -121,6 +134,19 @@ export default async function RedeemPage() {
                       <span className="tabular-nums text-accent-700">{r.amount}</span> 积分
                       <span className="px-1.5 text-line">·</span>
                       {dateFmt.format(r.createdAt)} 提交
+                      {r.attachmentFile && (
+                        <>
+                          <span className="px-1.5 text-line">·</span>
+                          <a
+                            href={`/api/redemptions/${r.id}/attachment`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-brand-700 underline underline-offset-2 transition hover:text-brand-600"
+                          >
+                            查看凭证 ↗
+                          </a>
+                        </>
+                      )}
                     </div>
                   </div>
                   <span className={`${s.cls} shrink-0`}>{s.text}</span>

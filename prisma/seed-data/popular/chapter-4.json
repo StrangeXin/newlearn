@@ -1,0 +1,107 @@
+{
+  "index": 4,
+  "title": "大模型与生成式 AI",
+  "theme": "认识这一轮 AI 浪潮的主角——大模型：它是什么、怎么被'教'出来、怎么用好、又有哪些硬伤。",
+  "keywords": [
+    {
+      "term": "大语言模型(LLM)",
+      "description": "用海量文本训练出的超大 AI，能聊天、写作、总结、翻译、写代码，是 ChatGPT、豆包的内核。",
+      "referencePoints": "用海量文本训练；擅长语言类任务；是当代对话式 AI 的核心"
+    },
+    {
+      "term": "ChatGPT",
+      "description": "OpenAI 推出的对话式 AI，引爆了全民 AI 热潮，让普通人第一次直观感受到大模型的能力。",
+      "referencePoints": "现象级对话 AI 产品；让大模型走入大众；开启了这轮 AI 普及"
+    },
+    {
+      "term": "国产大模型(豆包/DeepSeek/通义/文心)",
+      "description": "国内主流可用的大模型，能力已相当能打，且更适合中文与本地合规场景。",
+      "referencePoints": "国内主流可用模型；中文与合规更友好；DeepSeek 等开源可自部署"
+    },
+    {
+      "term": "Transformer",
+      "description": "大模型的'发动机'架构，靠'注意力'机制让模型特别会抓重点、理解上下文。今天几乎所有大模型都基于它。",
+      "referencePoints": "当代大模型的核心架构；靠'注意力'抓重点；理解'它是底座'即可"
+    },
+    {
+      "term": "生成式 AI(AIGC)",
+      "description": "能创作新内容(文字、图、音、视频)的 AI，而不只是分类或判断。这一轮 AI 的'创造力'就来自它。",
+      "referencePoints": "能生成新内容而非只判断；覆盖文/图/音/视频；带来效率跃升与版权新题"
+    },
+    {
+      "term": "预训练(Pre-training)",
+      "description": "让模型先'读万卷书'——用海量数据打下通用底子，是大模型能力的根基。",
+      "referencePoints": "用海量数据打通用底子；成本极高、是能力根基；之后再针对任务微调"
+    },
+    {
+      "term": "微调(Fine-tuning)",
+      "description": "在预训练好的大模型上，用某领域的专门数据再'调教'一下，让它更懂你的行业/任务。",
+      "referencePoints": "在通用模型上做专门调教；用少量高质量数据；让模型更贴特定场景"
+    },
+    {
+      "term": "提示词(Prompt)",
+      "description": "你给 AI 的指令。怎么问，极大地决定它怎么答——会问的人能让同一个模型表现天差地别。",
+      "referencePoints": "提示词=给 AI 的指令；问法决定答案质量；是用好 AI 的第一技能"
+    },
+    {
+      "term": "上下文窗口(Context Window)",
+      "description": "AI 一次能'记住'并参考的内容长度。超出窗口的早期内容它就'忘'了。",
+      "referencePoints": "一次能处理的内容上限；超出会'断片'/遗忘；长文要注意窗口限制"
+    },
+    {
+      "term": "Token",
+      "description": "模型眼里的最小单位，大致相当于'字/词块'。算钱、算长度都按 token。",
+      "referencePoints": "模型处理文本的最小单位；约等于字/词块；计费与长度都按 token"
+    },
+    {
+      "term": "思维链(CoT)",
+      "description": "让 AI'一步步想'再给答案，能显著提升它在推理、计算类问题上的准确度。",
+      "referencePoints": "让模型分步推理；提升复杂问题准确率；'让它想清楚再答'即可"
+    },
+    {
+      "term": "推理大模型(o1/DeepSeek-R1)",
+      "description": "新一代会'深思熟虑'的模型，回答前先在内部多想几轮，更擅长难题，但更慢更贵。",
+      "referencePoints": "答前先深度推理；擅长数学/逻辑难题；代价是更慢更贵"
+    },
+    {
+      "term": "涌现能力(Emergent Abilities)",
+      "description": "模型大到一定程度，会突然'开窍'冒出小模型没有的新本领，这种现象叫涌现。",
+      "referencePoints": "能力随规模突然出现；小模型不具备、大模型才有；是'越大越强'的一种体现"
+    },
+    {
+      "term": "大模型幻觉(Hallucination)",
+      "description": "AI 会一本正经地编造看似合理实则错误的内容。这是它的固有毛病，关键结论必须人核对。",
+      "referencePoints": "幻觉=自信地胡说；是固有局限；关键信息务必人工核对"
+    },
+    {
+      "term": "知识截止日期(Knowledge Cutoff)",
+      "description": "模型只学到某个时间点的数据，之后的新事它不一定知道，除非联网或喂资料。",
+      "referencePoints": "模型知识有时间截止；不一定知道最新事；可用联网/检索补足"
+    },
+    {
+      "term": "多模态大模型(Multimodal LLM)",
+      "description": "不仅会文字，还能看图、听声、读文档的大模型，能力更全面。",
+      "referencePoints": "能同时处理文/图/声等；比纯文本模型更全能；是当前主流演进方向"
+    },
+    {
+      "term": "大模型评测/排行榜(LLM Benchmarks)",
+      "description": "用标准考题给模型打分排名，帮你判断'谁更强'；但要警惕刷榜和'考题泄露'。",
+      "referencePoints": "用标准测试比较模型；帮选型决策；警惕刷榜与数据污染"
+    },
+    {
+      "term": "大模型的成本(Cost of LLMs)",
+      "description": "调用大模型按 token 收费、训练更是天价。用得起、用得划算，是落地绕不开的账。",
+      "referencePoints": "调用按用量计费、训练昂贵；要算 ROI；小模型/本地化可降本"
+    },
+    {
+      "term": "大模型能做什么(What LLMs Can Do)",
+      "description": "写作、总结、问答、翻译、写代码、读长文、做客服……凡是和语言、信息处理相关的活，它大多能搭把手。",
+      "referencePoints": "擅长语言与信息处理类任务；写/读/译/答/码都行；适合做'助手'"
+    },
+    {
+      "term": "大模型不能做什么(What LLMs Cannot Do)",
+      "description": "它不保证正确、不懂你公司的私有信息、做不了需要实时/精确/担责的事——这些要靠工具、检索和人来补。",
+      "referencePoints": "不保证准确、不知私有信息、不担责；要靠检索/工具/人补足；别让它单独拍板"
+    }
+  ]
+}

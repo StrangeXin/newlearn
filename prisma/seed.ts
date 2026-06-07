@@ -1,8 +1,9 @@
 // ===========================================================================
 // prisma/seed.ts —— 灌种子数据
-//  - AI 学科：5 章 + 100 关键词（来自 prisma/seed-data/ai-keywords.json）
+//  - 两个学科：人工智能（普及版）/（专业版），各 5 章 + 100 关键词
+//    （内容来自 prisma/seed-data/popular|pro/chapter-N.json）
+//  - 两学科各自设开始日并 isActive=true 上线（可同时多个活跃学科）
 //  - 演示账号：超管 / 管理员 / 若干员工（共享默认密码，首登强制改密）
-//  - 激活 AI 学科并设开始日（4 周前的周一，便于演示多章已解锁）
 // 可重复执行：先按外键安全顺序清空，再重建。
 // ===========================================================================
 
@@ -293,7 +294,6 @@ async function clearAll() {
   await prisma.keywordProgress.deleteMany();
   await prisma.submission.deleteMany();
   await prisma.redemption.deleteMany();
-  await prisma.activeSubjectConfig.deleteMany();
   await prisma.keyword.deleteMany();
   await prisma.chapter.deleteMany();
   await prisma.subject.deleteMany();
@@ -320,51 +320,55 @@ async function main() {
     });
   }
 
-  // ---- AI 学科内容 ----
-  // 每章一个独立 JSON（prisma/seed-data/ai/chapter-N.json），避免单文件过大；
-  // 目录扫描 + 按 index 排序，未来加学科只需新建对应目录。
-  console.log("📚 导入 AI 学科 100 关键词…");
-  const data = loadChapters("ai");
+  // ---- 多学科内容 ----
+  // 平台可同时上线多个学习主题；每个学科一个内容目录（prisma/seed-data/<dir>/chapter-N.json），
+  // 目录扫描 + 按 index 排序。加学科只需新建对应目录并在此登记。
+  const SUBJECT_DEFS = [
+    { dir: "popular", title: "人工智能（普及版）", weeksAgo: 2 },
+    { dir: "pro", title: "人工智能（专业版）", weeksAgo: 2 },
+  ] as const;
 
-  const subject = await prisma.subject.create({
-    data: {
-      title: "人工智能",
-      // 2 周前开课 → 当前第 3 周：第 1–3 关开放、4–5 关锁定（便于演示周解锁）
-      startDate: mondayWeeksAgo(2),
-    },
-  });
-
-  let total = 0;
-  for (const ch of data.chapters.sort((a, b) => a.index - b.index)) {
-    const chapter = await prisma.chapter.create({
-      data: {
-        subjectId: subject.id,
-        index: ch.index,
-        title: cleanTitle(ch.title),
-        theme: ch.theme,
-      },
+  const built: { subject: { id: string; title: string; startDate: Date | null }; total: number }[] = [];
+  for (const def of SUBJECT_DEFS) {
+    console.log(`📚 导入学科「${def.title}」100 关键词…`);
+    const data = loadChapters(def.dir);
+    // 两学科各自独立开课日；isActive=true 即对员工上线（可同时多个）
+    const subject = await prisma.subject.create({
+      data: { title: def.title, isActive: true, startDate: mondayWeeksAgo(def.weeksAgo) },
     });
-    await prisma.keyword.createMany({
-      data: ch.keywords.map((k, i) => ({
-        chapterId: chapter.id,
-        term: k.term,
-        description: k.description,
-        referencePoints: k.referencePoints,
-        orderIndex: i,
-      })),
-    });
-    total += ch.keywords.length;
+    let total = 0;
+    for (const ch of data.chapters.sort((a, b) => a.index - b.index)) {
+      const chapter = await prisma.chapter.create({
+        data: {
+          subjectId: subject.id,
+          index: ch.index,
+          title: cleanTitle(ch.title),
+          theme: ch.theme,
+        },
+      });
+      await prisma.keyword.createMany({
+        data: ch.keywords.map((k, i) => ({
+          chapterId: chapter.id,
+          term: k.term,
+          description: k.description,
+          referencePoints: k.referencePoints,
+          orderIndex: i,
+        })),
+      });
+      total += ch.keywords.length;
+    }
+    built.push({ subject, total });
   }
 
-  // ---- 激活当前学科 ----
-  await prisma.activeSubjectConfig.create({
-    data: { singletonId: "GLOBAL", activeSubjectId: subject.id },
-  });
+  const popular = built[0].subject;
+  const pro = built[1].subject;
 
-  // ---- 模拟一名员工的学习轨迹（让成长轨迹页开箱即看；其余员工保留空白以演示 onboarding）----
+  // ---- 演示数据 ----
+  // 普及版：完整演示（成长轨迹 + 第1章排名 + 待审兑换）；专业版：一份较轻的排名演示，
+  // 让两个学科都有数据、且体现「同一员工可在多个学科分别学习、积分按学科隔离」。
   console.log("🧬 模拟员工学习轨迹…");
   await simulateLearning(
-    subject.id,
+    popular.id,
     "李四",
     {
       position: "数据分析师",
@@ -376,21 +380,39 @@ async function main() {
     },
     [0.3, 0.55, 0.85, 0.65, 0.95, 1.0],
   );
+  await simulateLearning(
+    pro.id,
+    "张三",
+    {
+      position: "算法工程师",
+      department: "AI实验室",
+      level: "P6 / 5 年",
+      background: "机器学习硕士，做过推荐与 NLP",
+      aiFamiliarity: "熟练（用过一些工具）",
+      applicationAreas: "模型研发、RAG、私有化部署",
+    },
+    [0.6, 0.8, 0.7, 0.95, 0.85, 1.0],
+  );
 
-  // 排名演示：4 名员工完成第 1 章全部（不同均分，含并列 75 演示「并列均给」）
-  const startDate = subject.startDate!;
-  await seedChapterCompletion(subject.id, startDate, "赵六", { position: "算法工程师", department: "AI实验室", level: "P7/8年", background: "机器学习博士", aiFamiliarity: "精通（能落地应用）", applicationAreas: "模型研发、效果优化" }, 1, 88);
-  await seedChapterCompletion(subject.id, startDate, "钱七", { position: "前端工程师", department: "产品研发", level: "P6/5年", background: "计算机科学", aiFamiliarity: "熟练（用过一些工具）", applicationAreas: "AI 辅助编码、组件生成" }, 1, 82);
-  await seedChapterCompletion(subject.id, startDate, "孙八", { position: "测试工程师", department: "质量部", level: "P5/4年", background: "软件工程", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "用例生成、缺陷分析" }, 1, 75);
-  await seedChapterCompletion(subject.id, startDate, "周九", { position: "运维工程师", department: "基础设施", level: "P6/6年", background: "网络与系统", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "日志分析、告警归因" }, 1, 75);
+  // 排名演示：普及版第 1 章 —— 4 名员工完成全部（含并列 75 演示「并列均给」）
+  const popStart = popular.startDate!;
+  await seedChapterCompletion(popular.id, popStart, "赵六", { position: "算法工程师", department: "AI实验室", level: "P7/8年", background: "机器学习博士", aiFamiliarity: "精通（能落地应用）", applicationAreas: "模型研发、效果优化" }, 1, 88);
+  await seedChapterCompletion(popular.id, popStart, "钱七", { position: "前端工程师", department: "产品研发", level: "P6/5年", background: "计算机科学", aiFamiliarity: "熟练（用过一些工具）", applicationAreas: "AI 辅助编码、组件生成" }, 1, 82);
+  await seedChapterCompletion(popular.id, popStart, "孙八", { position: "测试工程师", department: "质量部", level: "P5/4年", background: "软件工程", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "用例生成、缺陷分析" }, 1, 75);
+  await seedChapterCompletion(popular.id, popStart, "周九", { position: "运维工程师", department: "基础设施", level: "P6/6年", background: "网络与系统", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "日志分析、告警归因" }, 1, 75);
 
-  // 给李四种一个待审兑换，演示审批流
+  // 排名演示：专业版第 1 章 —— 2 名员工完成全部
+  const proStart = pro.startDate!;
+  await seedChapterCompletion(pro.id, proStart, "王五", { position: "后端工程师", department: "平台组", level: "P7/7年", background: "分布式系统", aiFamiliarity: "熟练（用过一些工具）", applicationAreas: "推理服务、网关、可观测" }, 1, 90);
+  await seedChapterCompletion(pro.id, proStart, "吴十", { position: "数据工程师", department: "数据平台", level: "P6/5年", background: "大数据与数仓", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "特征平台、向量检索" }, 1, 80);
+
+  // 给李四种一个待审兑换（普及版积分），演示审批流
   const liSi = await prisma.user.findUnique({ where: { loginName: "李四" } });
   if (liSi) {
     await prisma.redemption.create({
       data: {
         userId: liSi.id,
-        subjectId: subject.id,
+        subjectId: popular.id,
         item: "技术书籍《深度学习》",
         amount: 3,
         status: "PENDING",
@@ -399,7 +421,9 @@ async function main() {
   }
 
   console.log(
-    `✅ 完成：${DEMO_USERS.length} 个账号、学科「${subject.title}」共 ${data.chapters.length} 章 / ${total} 关键词，已激活为当前学科。`,
+    `✅ 完成：${DEMO_USERS.length} 个账号、${built.length} 个学科（${built
+      .map((b) => `「${b.subject.title}」${b.total} 词`)
+      .join("、")}），均已上线。`,
   );
   console.log(`   默认密码：${DEFAULT_PASSWORD}（首登强制改密）`);
 }

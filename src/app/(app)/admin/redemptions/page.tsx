@@ -22,13 +22,20 @@ export default async function AdminRedemptionsPage() {
     prisma.redemption.findMany({
       where: { status: "PENDING" },
       orderBy: { createdAt: "asc" },
-      include: { user: { select: { name: true } } },
+      include: {
+        user: { select: { name: true } },
+        attachmentFile: { select: { id: true, mimeType: true } },
+      },
     }),
     prisma.redemption.findMany({
       where: { status: { in: ["APPROVED", "REJECTED"] } },
       orderBy: { reviewedAt: "desc" },
       take: 20,
-      include: { user: { select: { name: true } }, reviewedBy: { select: { name: true } } },
+      include: {
+        user: { select: { name: true } },
+        reviewedBy: { select: { name: true } },
+        attachmentFile: { select: { id: true, mimeType: true } },
+      },
     }),
   ]);
 
@@ -90,7 +97,16 @@ export default async function AdminRedemptionsPage() {
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
-                    {r.attachment ? (
+                    {r.attachmentFile ? (
+                      <a
+                        href={`/api/redemptions/${r.id}/attachment`}
+                        className="text-sm font-medium text-brand-700 underline underline-offset-2 transition hover:text-brand-600"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        查看凭证 ↗
+                      </a>
+                    ) : r.attachment ? (
                       <a
                         href={r.attachment}
                         className="text-sm font-medium text-brand-700 underline underline-offset-2 transition hover:text-brand-600"

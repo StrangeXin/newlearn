@@ -17,22 +17,22 @@ export interface AdminState {
 }
 
 /**
- * 演示用：把当前活跃学科的开始日前移/后移若干周，从而改变「当前周」。
+ * 演示用：把指定学科的开始日前移/后移若干周，从而改变其「当前周」。
  * deltaWeeks=+1 表示「快进一周」（开始日提前 7 天）。
  */
-export async function shiftWeeksAction(deltaWeeks: number): Promise<AdminState> {
+export async function shiftWeeksAction(
+  subjectId: string,
+  deltaWeeks: number,
+): Promise<AdminState> {
   await requireAdmin();
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) return { error: "当前没有活跃学科" };
-  const subject = await prisma.subject.findUnique({ where: { id: cfg.activeSubjectId } });
+  if (!subjectId) return { error: "缺少学科" };
+  const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
   if (!subject?.startDate) return { error: "学科未设开始日" };
 
   const next = new Date(subject.startDate.getTime() - deltaWeeks * 7 * DAY_MS);
   await prisma.subject.update({ where: { id: subject.id }, data: { startDate: next } });
   revalidatePath("/admin");
+  revalidatePath("/admin/content");
   revalidatePath("/learn");
   return { ok: true };
 }
@@ -115,34 +115,46 @@ export async function setRoleAction(userId: string, role: string): Promise<Admin
 
 // ----------------------------- 学科 / 内容 -----------------------------
 
-/** 设为当前活跃学科。 */
-export async function setActiveSubjectAction(subjectId: string): Promise<AdminState> {
+/**
+ * 上线 / 下线某学科（isActive）。可同时上线多个学科，员工自由选择学习哪个。
+ * 上线时若尚未设开始日，则学员侧显示「未开课」直到管理员设开始日。
+ */
+export async function toggleSubjectActiveAction(
+  subjectId: string,
+  active: boolean,
+): Promise<AdminState> {
   await requireAdmin();
-  await prisma.activeSubjectConfig.upsert({
-    where: { singletonId: "GLOBAL" },
-    create: { singletonId: "GLOBAL", activeSubjectId: subjectId },
-    update: { activeSubjectId: subjectId },
+  if (!subjectId) return { error: "缺少学科" };
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    include: { _count: { select: { chapters: true } } },
   });
+  if (!subject) return { error: "学科不存在" };
+  if (active && subject._count.chapters === 0) {
+    return { error: "该学科还没有内容，先导入章节再上线" };
+  }
+  await prisma.subject.update({ where: { id: subjectId }, data: { isActive: active } });
+  revalidatePath("/admin");
   revalidatePath("/admin/content");
   revalidatePath("/learn");
   return { ok: true };
 }
 
-/** 设置当前学科开始日（YYYY-MM-DD）。 */
+/** 设置指定学科的开始日（YYYY-MM-DD）；subjectId 随表单提交。 */
 export async function setStartDateAction(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
   await requireAdmin();
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    select: { activeSubjectId: true },
-  });
-  if (!cfg?.activeSubjectId) return { error: "当前没有活跃学科" };
+  const subjectId = String(formData.get("subjectId") ?? "");
+  if (!subjectId) return { error: "缺少学科" };
+  const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
+  if (!subject) return { error: "学科不存在" };
   const dateStr = String(formData.get("startDate") ?? "");
   const d = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(d.getTime())) return { error: "日期无效" };
-  await prisma.subject.update({ where: { id: cfg.activeSubjectId }, data: { startDate: d } });
+  await prisma.subject.update({ where: { id: subjectId }, data: { startDate: d } });
+  revalidatePath("/admin");
   revalidatePath("/admin/content");
   revalidatePath("/learn");
   return { ok: true };

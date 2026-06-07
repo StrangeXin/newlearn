@@ -2,15 +2,24 @@
 
 import { useActionState } from "react";
 import { requestRedemptionAction, type RedeemState } from "@/app/actions/redemption";
+import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_MB } from "@/lib/upload";
 
 const initial: RedeemState = {};
 
-export function RedeemForm({ available }: { available: number }) {
+export function RedeemForm({
+  available,
+  subjectId,
+}: {
+  available: number;
+  subjectId: string;
+}) {
   const [state, action, pending] = useActionState(requestRedemptionAction, initial);
   const disabled = available <= 0;
 
   return (
     <form action={action} className="space-y-3">
+      {/* 积分按学科隔离：申请绑定当前学科 */}
+      <input type="hidden" name="subjectId" value={subjectId} />
       <div>
         <label htmlFor="redeem-item" className="field-label">
           兑换物品 / 工具
@@ -42,14 +51,16 @@ export function RedeemForm({ available }: { available: number }) {
       </div>
         <div>
           <label htmlFor="redeem-attachment" className="field-label">
-            凭证 / 链接（可选）
+            报销凭证（可选）
           </label>
           <input
             id="redeem-attachment"
-            name="attachment"
-            placeholder="商品链接或截图地址，方便管理员核对"
-            className="input"
+            name="file"
+            type="file"
+            accept={ATTACHMENT_ACCEPT}
+            className="input h-auto py-2 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-700"
           />
+          <p className="field-hint">支持截图（PNG/JPG/WebP）或 PDF，不超过 {MAX_ATTACHMENT_MB}MB。</p>
         </div>
       </div>
 

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
 import { getScheduleInfo } from "@/lib/schedule";
 import { getFinanceStats, getProgressOverview, getQualityStats } from "@/lib/stats";
+import { getActiveSubjects } from "@/lib/subject";
+import { SubjectTabs } from "@/components/subject-tabs";
 
 function Stat({
   label,
@@ -38,21 +40,24 @@ function SectionHead({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-export default async function AdminStatsPage() {
+export default async function AdminStatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subject?: string }>;
+}) {
   await requireAdmin();
-  const cfg = await prisma.activeSubjectConfig.findUnique({
-    where: { singletonId: "GLOBAL" },
-    include: { activeSubject: { select: { title: true, startDate: true } } },
-  });
-  if (!cfg?.activeSubjectId) redirect("/admin");
-  const sid = cfg.activeSubjectId;
+  const subjects = await getActiveSubjects();
+  if (subjects.length === 0) redirect("/admin");
+  const { subject: requested } = await searchParams;
+  const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
+  const sid = subject.id;
 
   const [progress, quality, finance] = await Promise.all([
     getProgressOverview(sid),
     getQualityStats(sid),
     getFinanceStats(sid),
   ]);
-  const week = getScheduleInfo(cfg.activeSubject).currentWeek;
+  const week = getScheduleInfo(subject).currentWeek;
   const maxDist = Math.max(1, ...quality.distribution.map((d) => d.count));
 
   const notStarted = progress.rows.filter((r) => r.completed === 0);
@@ -68,11 +73,12 @@ export default async function AdminStatsPage() {
         ← 管理后台
       </Link>
       <h1 className="mt-3 text-2xl font-bold text-ink">数据统计</h1>
-      <p className="mt-1 text-sm text-muted">
-        学科：{cfg.activeSubject?.title} · 第 <span className="tabular-nums">{week}</span> 周 ·
+      <p className="mt-1 mb-4 text-sm text-muted">
+        学科：{subject.title} · 第 <span className="tabular-nums">{week}</span> 周 ·
         全员 <span className="tabular-nums">{progress.rows.length}</span> 人，已开始{" "}
         <span className="tabular-nums">{startedCount}</span> 人
       </p>
+      <SubjectTabs subjects={subjects} activeId={sid} basePath="/admin/stats" />
 
       {/* 财务 */}
       <section className="mt-8">
@@ -222,7 +228,7 @@ export default async function AdminStatsPage() {
       </section>
 
       <div className="mt-8 border-t border-line pt-5">
-        <Link href="/admin/rankings" className="btn btn-secondary btn-sm">
+        <Link href={`/admin/rankings?subject=${sid}`} className="btn btn-secondary btn-sm">
           查看各章排行榜与 top3 发奖 →
         </Link>
       </div>

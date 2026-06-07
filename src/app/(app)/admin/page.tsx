@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
-import { getScheduleInfo } from "@/lib/schedule";
+import { getScheduleInfo, isCycleEnded } from "@/lib/schedule";
+import { ACTIVE_SUBJECT_WHERE, SUBJECT_ORDER } from "@/lib/subject";
 import { ScheduleControls } from "./schedule-controls";
 
 function StatCard({
@@ -48,7 +49,7 @@ const NAV_ITEMS = [
   {
     href: "/admin/content",
     title: "学科与内容",
-    desc: "切换当前学科、设开始日、校对关键词",
+    desc: "上线/下线学科、设开始日、校对关键词",
   },
   {
     href: "/admin/stats",
@@ -65,24 +66,25 @@ const NAV_ITEMS = [
 export default async function AdminPage() {
   const admin = await requireAdmin();
 
-  const [employeeCount, adminCount, keywordCount, activatedCount, pendingRedeems, cfg] =
+  const [employeeCount, adminCount, keywordCount, activatedCount, pendingRedeems, activeSubjects] =
     await Promise.all([
       prisma.user.count({ where: { role: "EMPLOYEE" } }),
       prisma.user.count({ where: { role: { in: ["ADMIN", "SUPERADMIN"] } } }),
       prisma.keyword.count(),
       prisma.user.count({ where: { isActivated: true } }),
       prisma.redemption.count({ where: { status: "PENDING" } }),
-      prisma.activeSubjectConfig.findUnique({
-        where: { singletonId: "GLOBAL" },
-        include: { activeSubject: true },
+      prisma.subject.findMany({
+        where: ACTIVE_SUBJECT_WHERE,
+        orderBy: SUBJECT_ORDER,
+        include: { _count: { select: { chapters: true } } },
       }),
     ]);
 
-  const subject = cfg?.activeSubject ?? null;
-  const currentWeek = subject ? getScheduleInfo(subject).currentWeek : 0;
-  const totalChapters = 5;
-  const openChapter = Math.min(currentWeek, totalChapters);
   const inactiveCount = employeeCount - activatedCount;
+  const subjectsLabel =
+    activeSubjects.length === 0
+      ? "未开启"
+      : activeSubjects.map((s) => s.title).join("、");
 
   return (
     <main className="page py-8">
@@ -90,10 +92,8 @@ export default async function AdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-ink">管理后台</h1>
           <p className="mt-1.5 text-sm text-muted">
-            {admin.name} · 当前学科
-            <span className="ml-1 font-semibold text-brand-700">
-              {subject?.title ?? "未开启"}
-            </span>
+            {admin.name} · 已上线学科
+            <span className="ml-1 font-semibold text-brand-700">{subjectsLabel}</span>
           </p>
         </div>
         {pendingRedeems > 0 && (
@@ -119,33 +119,63 @@ export default async function AdminPage() {
         <StatCard
           label="关键词库"
           value={keywordCount}
-          hint={subject ? `${subject.title} · 共 ${totalChapters} 章` : "未开启学科"}
+          hint={`${activeSubjects.length} 个学科已上线`}
         />
       </div>
 
-      {subject ? (
-        <div className="card mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-5">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-ink">
-                第 <span className="tabular-nums">{currentWeek}</span> 周
-              </span>
-              <span className="badge badge-brand tabular-nums">
-                已解锁第 1 至 {openChapter} 章
-              </span>
-            </div>
-            <p className="mt-1.5 text-xs text-muted">
-              自然周（周一到周日）顺序解锁，周日夜结算该周排名。下方按钮移动开始日；回退会重新锁住已解锁的关卡。
-            </p>
-          </div>
-          <ScheduleControls />
+      {activeSubjects.length > 0 ? (
+        <div className="mt-5 space-y-3">
+          {activeSubjects.map((s) => {
+            const { started, currentWeek } = getScheduleInfo(s);
+            const totalChapters = s._count.chapters;
+            const openChapter = Math.min(currentWeek, totalChapters);
+            const ended = isCycleEnded(s, totalChapters);
+            return (
+              <div
+                key={s.id}
+                className="card flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-5"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-ink">{s.title}</span>
+                    {ended ? (
+                      <span className="badge badge-muted">培训周期已结束 · 仅补学</span>
+                    ) : started ? (
+                      <>
+                        <span className="text-sm text-muted">
+                          第 <span className="tabular-nums">{currentWeek}</span> 周
+                        </span>
+                        <span className="badge badge-brand tabular-nums">
+                          已解锁第 1 至 {openChapter} 章
+                        </span>
+                      </>
+                    ) : (
+                      <span className="badge badge-muted">未设开始日</span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">
+                    {ended
+                      ? "全部章节已结算完毕，员工可继续补学（照常拿基础积分，不再参与排名）。需要的话可移动开始日重开周期。"
+                      : "自然周（周一到周日）顺序解锁，周日夜结算该周排名。下方按钮移动开始日；回退会重新锁住已解锁的关卡。"}
+                  </p>
+                </div>
+                {started ? (
+                  <ScheduleControls subjectId={s.id} />
+                ) : (
+                  <Link href="/admin/content" className="btn btn-primary btn-sm shrink-0">
+                    去设开始日
+                  </Link>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="card mt-5 flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
             <div className="font-bold text-ink">还没开课</div>
             <p className="mt-1.5 text-xs text-muted">
-              去「学科与内容」选学科并设开始日。
+              去「学科与内容」上线学科并设开始日。可同时上线多个学科。
             </p>
           </div>
           <Link href="/admin/content" className="btn btn-primary btn-sm shrink-0">

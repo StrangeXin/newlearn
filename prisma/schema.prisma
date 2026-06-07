@@ -101,37 +101,19 @@ model User {
 }
 
 // ============================================================================
-// 当前活跃学科单例（强约束「全公司至多一个活跃学科」）
-// ============================================================================
-//
-// 评审问题：Boolean isActive + 普通索引无法在 DB 层保证「全公司至多一个 isActive=true」，
-// 并发激活可能产生两个活跃学科。
-//
-// 修复：用单例配置表保证唯一性 —— singletonId 固定为常量（如 "GLOBAL"）并 @@id，
-// activeSubjectId 指向当前活跃学科。整表至多一行，因此「当前学科」全局唯一、无二义。
-// Subject 不再用 isActive 布尔表达「当前」，避免多真值；如需历史/未来学科状态仍可
-// 用 startDate / archivedAt 区分。
-model ActiveSubjectConfig {
-  /// 单例主键，业务上固定写入常量 "GLOBAL"，保证整表至多一行
-  singletonId     String   @id @default("GLOBAL")
-  /// 当前全公司统一指定的活跃学科；尚未指定为 null
-  activeSubjectId String?  @unique
-  updatedAt       DateTime @updatedAt
-  /// 最近一次指定/切换操作者（管理员留痕）
-  updatedById     String?
-
-  activeSubject Subject? @relation(fields: [activeSubjectId], references: [id], onDelete: SetNull)
-
-  @@map("active_subject_config")
-}
-
-// ============================================================================
 // 内容层级：Subject -> Chapter -> Keyword
 // ============================================================================
+//
+// 多活跃学科：平台可同时上线多个学习主题（如「人工智能（普及版）」「（专业版）」），
+// 员工自由选择学习哪一个。学科是否对员工可见 = isActive && archivedAt == null；
+// startDate 各学科独立，驱动各自的自然周 weekIndex 与顺序解锁。
+// （早期用 ActiveSubjectConfig 单例强约束「全公司至多一个活跃学科」，已废弃。）
 
 model Subject {
   id         String    @id @default(cuid())
   title      String    @unique
+  /// 是否对员工上线（可见且可学）。管理员可同时上线多个学科。下线即置 false。
+  isActive   Boolean   @default(false)
   /// 学科开启日（管理员开启时设置；用于推导自然周 weekIndex 与顺序解锁）；未开启为 null
   startDate  DateTime?
   /// 归档/下线时间；下线后不再作为可激活学科。null 表示仍可用
@@ -144,9 +126,8 @@ model Subject {
   pointsLedgers  PointsLedger[]
   rankingResults RankingResult[]
   redemptions    Redemption[]
-  /// 反向：被哪个单例配置引用为当前活跃学科（至多一个）
-  activeConfig   ActiveSubjectConfig?
 
+  @@index([isActive])
   @@map("subjects")
 }
 
@@ -470,10 +451,32 @@ model Redemption {
 
   /// 反向：审批通过生成的 REDEEM 扣减流水（至多一条，由 PointsLedger 唯一约束保证幂等）
   pointsLedgers PointsLedger[]
+  /// 上传的报销凭证（截图/PDF，至多一份）；通过鉴权 API 下载，不公开
+  attachmentFile RedemptionAttachment?
 
   @@index([userId])
   @@index([status])
   @@map("redemptions")
+}
+
+// 报销凭证文件（截图/PDF）。二进制单独存表，避免兑换列表查询带出大字段；
+// 仅本人或管理员可经 /api/redemptions/[id]/attachment 鉴权下载，不进 public。
+model RedemptionAttachment {
+  id           String   @id @default(cuid())
+  redemptionId String   @unique
+  /// 原始文件名（下载时回显）
+  fileName     String
+  /// MIME 类型：image/png|jpeg|webp 或 application/pdf
+  mimeType     String
+  /// 字节数
+  size         Int
+  /// 文件二进制内容
+  data         Bytes
+  createdAt    DateTime @default(now())
+
+  redemption Redemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
+
+  @@map("redemption_attachments")
 }
 
 // ============================================================================

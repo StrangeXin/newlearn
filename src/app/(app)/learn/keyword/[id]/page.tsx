@@ -15,6 +15,10 @@ import { ScoreReveal } from "./score-reveal";
 import { RecordView } from "./record-view";
 import { AskForm } from "./ask-form";
 import { ReasoningDialog } from "@/components/reasoning-dialog";
+import {
+  KeywordNoteIllustration,
+  shouldShowKeywordNoteIllustration,
+} from "./keyword-note-illustration";
 
 export default async function KeywordPage({
   params,
@@ -79,7 +83,7 @@ export default async function KeywordPage({
   // 全部已完成的答题记录（最新在前）；归档区展示
   const completed = history.filter((s) => s.status === "COMPLETED" && s.scoring);
 
-  const backHref = `/learn/chapter/${keyword.chapter.index}`;
+  const backHref = `/learn/${keyword.chapter.subjectId}/chapter/${keyword.chapter.index}`;
   const peerNotes = progress?.isCompleted ? await getPeerNotes(user.id, id) : null;
   const keywordStat =
     progress?.isCompleted ? await getKeywordStat(id, progress.bestFinalScore) : null;
@@ -119,6 +123,16 @@ export default async function KeywordPage({
           </span>
         )}
       </div>
+
+      {step === "note" && !dailyLimitReached && shouldShowKeywordNoteIllustration(keyword.term) && (
+        <div className="mt-5">
+          <KeywordNoteIllustration
+            term={keyword.term}
+            description={keyword.description}
+            referencePoints={keyword.referencePoints}
+          />
+        </div>
+      )}
 
       <div className="card mt-6 p-6">
         {step === "note" &&
@@ -216,7 +230,7 @@ export default async function KeywordPage({
             </p>
             {needReflection && (
               <Link
-                href={`/learn/chapter/${keyword.chapter.index}/reflect`}
+                href={`${backHref}/reflect`}
                 className="mx-auto mt-5 block max-w-prose rounded-2xl bg-brand-600 p-5 text-left text-white transition hover:-translate-y-0.5 hover:bg-brand-700"
               >
                 <div className="text-sm font-medium text-white/85">🎉 本章 20 词全部通关！</div>
