@@ -165,6 +165,8 @@ model Keyword {
   description     String?
   /// 可选「参考考核要点」，辅助 AI 打分；不填则 AI 自由判断
   referencePoints String?
+  /// 可选「关键词手绘配图提示词」；由内容运营逐词生成/调整，生图时直接使用，不用代码模板硬拼
+  illustrationPrompt String?
   /// 关键词在章内的展示顺序（用于闯关地图排序）
   orderIndex      Int      @default(0)
   createdAt       DateTime @default(now())

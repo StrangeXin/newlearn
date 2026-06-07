@@ -9,7 +9,6 @@ import { prisma } from "@/lib/db";
 import { requireAdmin, requireSuperadmin } from "@/lib/auth/user";
 import { hashPassword } from "@/lib/auth/password";
 import { keywordIllustrationFilePath } from "@/lib/keyword-illustration-assets";
-import { buildKeywordIllustrationPrompt } from "@/lib/keyword-illustration-prompt";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const execFileAsync = promisify(execFile);
@@ -177,10 +176,15 @@ export async function updateKeywordAction(
   const id = String(formData.get("keywordId") ?? "");
   const description = String(formData.get("description") ?? "").trim();
   const referencePoints = String(formData.get("referencePoints") ?? "").trim();
+  const illustrationPrompt = String(formData.get("illustrationPrompt") ?? "").trim();
   if (!id) return { error: "缺少关键词" };
   await prisma.keyword.update({
     where: { id },
-    data: { description: description || null, referencePoints: referencePoints || null },
+    data: {
+      description: description || null,
+      referencePoints: referencePoints || null,
+      illustrationPrompt: illustrationPrompt || null,
+    },
   });
   revalidatePath("/admin/content");
   return { ok: true };
@@ -195,19 +199,16 @@ export async function regenerateKeywordIllustrationAction(
 
   const keyword = await prisma.keyword.findUnique({
     where: { id: keywordId },
-    select: { id: true, term: true, description: true, referencePoints: true },
+    select: { id: true, term: true, illustrationPrompt: true },
   });
   if (!keyword) return { error: "关键词不存在" };
+  const prompt = keyword.illustrationPrompt?.trim();
+  if (!prompt) return { error: "请先为该关键词填写并保存配图提示词" };
 
   const out = keywordIllustrationFilePath(keyword.id);
   await mkdir(dirname(out), { recursive: true });
 
   const script = join(process.cwd(), "scripts", "openai-image.sh");
-  const prompt = buildKeywordIllustrationPrompt({
-    term: keyword.term,
-    description: keyword.description,
-    referencePoints: keyword.referencePoints,
-  });
 
   try {
     await execFileAsync(

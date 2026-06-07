@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { buildKeywordIllustrationPrompt } from "@/lib/keyword-illustration-prompt";
 
 export function KeywordIllustrationImage({
   term,
@@ -39,8 +38,7 @@ export function KeywordIllustrationImage({
 export function KeywordIllustrationAdminPanel({
   keywordId,
   term,
-  description,
-  referencePoints,
+  prompt,
   src,
   onRegenerate,
   generating = false,
@@ -49,16 +47,13 @@ export function KeywordIllustrationAdminPanel({
 }: {
   keywordId: string;
   term: string;
-  description?: string | null;
-  referencePoints?: string | null;
+  prompt?: string | null;
   src?: string | null;
   onRegenerate?: (keywordId: string) => void;
   generating?: boolean;
   generateError?: string;
   generateOk?: boolean;
 }) {
-  const prompt = buildKeywordIllustrationPrompt({ term, description, referencePoints });
-
   return (
     <section className="rounded-xl border border-line bg-surface-2 p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -89,7 +84,7 @@ export function KeywordIllustrationAdminPanel({
             )}
           </div>
           <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 text-xs leading-relaxed text-muted">
-            {prompt}
+            {prompt?.trim() || "还没有为这个关键词填写专属配图提示词。"}
           </pre>
           {generateError && <p className="field-error mt-2">{generateError}</p>}
           {generateOk && (
