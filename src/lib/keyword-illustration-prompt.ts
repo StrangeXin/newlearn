@@ -1,16 +1,4 @@
-import Image from "next/image";
-
-const EXPERIMENT_TERMS = new Set(["人工智能(AI)"]);
-
-const EXPERIMENT_ASSET_BY_TERM: Record<string, string> = {
-  "人工智能(AI)": "/keyword-illustrations/ai.svg",
-};
-
-export function shouldShowKeywordNoteIllustration(term: string) {
-  return EXPERIMENT_TERMS.has(term);
-}
-
-function referencePointList(referencePoints?: string | null) {
+export function referencePointList(referencePoints?: string | null) {
   return (referencePoints ?? "")
     .split(/[;；]/)
     .map((point) => point.trim())
@@ -48,58 +36,4 @@ export function buildKeywordIllustrationPrompt({
   ]
     .filter(Boolean)
     .join("\n");
-}
-
-export function KeywordNoteIllustration({
-  term,
-  description,
-  referencePoints,
-}: {
-  term: string;
-  description?: string | null;
-  referencePoints?: string | null;
-}) {
-  const src = EXPERIMENT_ASSET_BY_TERM[term];
-  const prompt = buildKeywordIllustrationPrompt({ term, description, referencePoints });
-
-  return (
-    <figure className="mb-4 overflow-hidden rounded-xl border border-line bg-surface">
-      <div className="relative aspect-video bg-white">
-        {src ? (
-          <Image
-            src={src}
-            alt={`${term} 的手绘配图`}
-            fill
-            sizes="(max-width: 896px) 100vw, 848px"
-            className="object-contain"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-6 text-center">
-            <div>
-              <div className="text-sm font-bold text-ink">待生成手绘配图</div>
-              <p className="mt-1 text-xs text-muted">
-                这张图会根据关键词、简介和考核要点生成。
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-      <figcaption className="border-t border-line bg-surface-2 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-xs font-semibold text-brand-700">关键词手绘配图实验</div>
-            <p className="mt-0.5 text-sm font-bold text-ink">{term}</p>
-          </div>
-          <details className="group">
-            <summary className="btn btn-secondary btn-sm list-none">
-              生成提示词
-            </summary>
-            <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 text-xs leading-relaxed text-muted">
-              {prompt}
-            </pre>
-          </details>
-        </div>
-      </figcaption>
-    </figure>
-  );
 }

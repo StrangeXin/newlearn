@@ -16,9 +16,9 @@ import { RecordView } from "./record-view";
 import { AskForm } from "./ask-form";
 import { ReasoningDialog } from "@/components/reasoning-dialog";
 import {
-  KeywordNoteIllustration,
-  shouldShowKeywordNoteIllustration,
-} from "./keyword-note-illustration";
+  KeywordIllustrationImage,
+} from "@/components/keyword-illustration";
+import { getKeywordIllustrationSrc } from "@/lib/keyword-illustration-assets";
 
 export default async function KeywordPage({
   params,
@@ -87,6 +87,7 @@ export default async function KeywordPage({
   const peerNotes = progress?.isCompleted ? await getPeerNotes(user.id, id) : null;
   const keywordStat =
     progress?.isCompleted ? await getKeywordStat(id, progress.bestFinalScore) : null;
+  const illustrationSrc = getKeywordIllustrationSrc({ keywordId: keyword.id, term: keyword.term });
 
   // 整章 20 词全部通关后，提示去做章节反思（反思是上排行榜的前提）
   let needReflection = false;
@@ -124,13 +125,9 @@ export default async function KeywordPage({
         )}
       </div>
 
-      {step === "note" && !dailyLimitReached && shouldShowKeywordNoteIllustration(keyword.term) && (
+      {step === "note" && !dailyLimitReached && illustrationSrc && (
         <div className="mt-5">
-          <KeywordNoteIllustration
-            term={keyword.term}
-            description={keyword.description}
-            referencePoints={keyword.referencePoints}
-          />
+          <KeywordIllustrationImage term={keyword.term} src={illustrationSrc} />
         </div>
       )}
 

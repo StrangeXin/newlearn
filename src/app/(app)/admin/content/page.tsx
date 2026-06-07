@@ -8,6 +8,7 @@ import {
   ToggleActiveButton,
   StartDateForm,
 } from "./content-forms";
+import { getKeywordIllustrationSrc } from "@/lib/keyword-illustration-assets";
 
 function toDateInput(d: Date | null): string {
   if (!d) return "";
@@ -163,7 +164,7 @@ export default async function AdminContentPage({
                         {filled}/{ch.keywords.length} 词已补全
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-1.5">
                       {ch.keywords.map((kw) => (
                         <KeywordEditor
                           key={kw.id}
@@ -171,6 +172,10 @@ export default async function AdminContentPage({
                           term={kw.term}
                           description={kw.description ?? ""}
                           referencePoints={kw.referencePoints ?? ""}
+                          illustrationSrc={getKeywordIllustrationSrc({
+                            keywordId: kw.id,
+                            term: kw.term,
+                          })}
                         />
                       ))}
                     </div>
