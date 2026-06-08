@@ -7,8 +7,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { runWithAiTrace, type AiTrace } from "@/lib/ai-log";
 import { getLearnerContext } from "@/lib/learner";
-import { EMPTY_TAGS, getScoringProvider, getScoringService } from "@/lib/scoring";
-import { streamReflectionSummaryDeepSeek } from "@/lib/scoring/deepseek";
+import { EMPTY_TAGS, getScoringService } from "@/lib/scoring";
 import { computeMemoryDiff } from "@/lib/memory-diff";
 
 const json = (v: unknown): Prisma.InputJsonValue => v as Prisma.InputJsonValue;
@@ -123,13 +122,16 @@ export async function submitReflection(
   const trace: AiTrace = { phase: "reflectionSummary", userId, chapterId };
   // 流式时累计思考过程，落库供「AI 思考过程」小弹窗回看。
   let reasoning = "";
-  const { summary, portrait } =
-    onReasoning && getScoringProvider() === "deepseek"
-      ? await streamReflectionSummaryDeepSeek(sumInput, trace, (text) => {
-          reasoning += text;
-          onReasoning(text);
-        })
-      : await runWithAiTrace(trace, () => getScoringService().reflectionSummary(sumInput));
+  const { summary, portrait } = await runWithAiTrace(trace, () =>
+    getScoringService().reflectionSummary(sumInput, {
+      onReasoning: onReasoning
+        ? (text) => {
+            reasoning += text;
+            onReasoning(text);
+          }
+        : undefined,
+    }),
+  );
 
   await prisma.chapterReflection.update({
     where: { id: reflection.id },

@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { saveNoteDraftAction } from "@/app/actions/draft";
 import { ThinkingPanel, useReasoningStream } from "@/components/thinking";
-
-const NOTE_MIN = 100;
-const NOTE_MAX = 2000;
-const AUTOSAVE_MS = 1200;
+import { AUTOSAVE_MS, NOTE_MAX, NOTE_MIN } from "@/lib/learn-limits";
 
 export function NoteForm({
   keywordId,

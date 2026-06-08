@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { Markdown } from "@/components/markdown";
-
-const QUESTION_MAX = 1000;
+import { consumeNdjson, StreamError } from "@/components/thinking";
+import { QUESTION_MAX } from "@/lib/learn-limits";
 
 interface QA {
   question: string;
@@ -34,50 +34,22 @@ export function AskForm({
     setQa((prev) => [...prev, { question, answer: "", reasoning: "" }]);
     if (taRef.current) taRef.current.value = "";
 
-    try {
-      const res = await fetch("/api/learn/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submissionId, question }),
+    let answer = "";
+    let reasoning = "";
+    const flush = () =>
+      setQa((prev) => {
+        const next = prev.slice();
+        next[idx] = { question, answer, reasoning };
+        return next;
       });
-      if (!res.ok || !res.body) {
-        const msg = (await res.text().catch(() => "")) || "提问失败，请重试";
-        setError(msg);
-        setQa((prev) => prev.slice(0, idx));
-        return;
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let answer = "";
-      let reasoning = "";
-      const flush = () =>
-        setQa((prev) => {
-          const next = prev.slice();
-          next[idx] = { question, answer, reasoning };
-          return next;
-        });
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          let ev: { type?: string; text?: string };
-          try {
-            ev = JSON.parse(line);
-          } catch {
-            continue;
-          }
-          if (ev.type === "reasoning") reasoning += ev.text ?? "";
-          else answer += ev.text ?? "";
-        }
+    try {
+      await consumeNdjson("/api/learn/ask", { submissionId, question }, (frame) => {
+        if (frame.type === "reasoning") reasoning += frame.text ?? "";
+        else answer += frame.text ?? "";
         flush();
-      }
-    } catch {
-      setError("网络出错，请重试");
+      });
+    } catch (e) {
+      setError(e instanceof StreamError ? e.message : "网络出错，请重试");
       setQa((prev) => prev.slice(0, idx));
     } finally {
       setPending(false);

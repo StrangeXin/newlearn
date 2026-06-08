@@ -1,21 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireUserOnboarded } from "@/lib/auth/user";
 import { getScheduleInfo, isCycleEnded } from "@/lib/schedule";
 import { ACTIVE_SUBJECT_WHERE, SUBJECT_ORDER } from "@/lib/subject";
 
 // 学科选择页：平台可同时上线多个学习主题，员工在此挑选要学的学科。
 // 仅一个学科时直接进入其闯关地图；无学科时空态。
 export default async function LearnHomePage() {
-  const user = await requireUser();
-  // 员工首次进来需先填基本资料（onboarding）
-  if (user.role === "EMPLOYEE") {
-    const profile = await prisma.employeeProfile.findUnique({
-      where: { userId: user.id },
-    });
-    if (!profile) redirect("/onboarding");
-  }
+  const user = await requireUserOnboarded();
 
   const subjects = await prisma.subject.findMany({
     where: ACTIVE_SUBJECT_WHERE,

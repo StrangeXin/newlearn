@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { saveAnswersDraftAction } from "@/app/actions/draft";
 import { ThinkingPanel, useReasoningStream } from "@/components/thinking";
-
-const AUTOSAVE_MS = 1200;
-const ANSWER_MAX = 1000;
+import { ANSWER_MAX, AUTOSAVE_MS } from "@/lib/learn-limits";
 
 export function FollowupsForm({
   submissionId,

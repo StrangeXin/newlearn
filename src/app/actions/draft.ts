@@ -2,9 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/user";
-
-// 草稿允许任意长度，但设个上限防滥用（远大于 2000 字正文上限）
-const DRAFT_MAX = 12000;
+import { DRAFT_MAX } from "@/lib/learn-limits";
 
 /** 自动保存笔记草稿（中途退出保留记录）。空内容则删除草稿。 */
 export async function saveNoteDraftAction(keywordId: string, text: string): Promise<void> {

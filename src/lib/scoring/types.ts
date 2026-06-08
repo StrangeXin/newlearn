@@ -192,6 +192,14 @@ export interface AnswerChunk {
   text: string;
 }
 
+/**
+ * 流式选项：传入 onReasoning 时，DeepSeek 实现走流式并把「思考过程」逐段回调出去；
+ * Mock 无 reasoning，忽略此项、直接返回确定性结果。打不打分由实现决定，调用方无需感知。
+ */
+export interface ScoringStreamOpts {
+  onReasoning?: (text: string) => void;
+}
+
 // -------------------------------- 服务接口 ---------------------------------
 
 /**
@@ -199,11 +207,12 @@ export interface AnswerChunk {
  * 测试与本地演示实现为 MockScoringService，通过 SCORING_PROVIDER 切换。
  */
 export interface ScoringService {
-  /** 第一段：对笔记打初始分并生成 1–3 个追问（结合学习者上下文个性化）。 */
-  submitNote(input: SubmitNoteInput): Promise<SubmitNoteResult>;
+  /** 第一段：对笔记打初始分并生成 1–3 个追问（结合学习者上下文个性化）。
+   *  传入 opts.onReasoning 时（仅 DeepSeek 生效）流式展示思考过程，返回结果不变。 */
+  submitNote(input: SubmitNoteInput, opts?: ScoringStreamOpts): Promise<SubmitNoteResult>;
 
   /** 第二段：综合原笔记与追问回答给出最终分、是否及格与中文反馈。 */
-  finalize(input: FinalizeInput): Promise<FinalizeResult>;
+  finalize(input: FinalizeInput, opts?: ScoringStreamOpts): Promise<FinalizeResult>;
 
   /** 每个关键词终评后：依据本次表现增量更新该员工的标签与画像。 */
   updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult>;
@@ -212,10 +221,17 @@ export interface ScoringService {
   reflectionQuestions(input: ReflectionQuestionsInput): Promise<string[]>;
 
   /** 章节反思作答后：给出章节总结，并把岗位结合融入画像。 */
-  reflectionSummary(input: ReflectionSummaryInput): Promise<ReflectionSummaryResult>;
+  reflectionSummary(
+    input: ReflectionSummaryInput,
+    opts?: ScoringStreamOpts,
+  ): Promise<ReflectionSummaryResult>;
 
-  /** 结果页追加提问：结合该词笔记/追问/历史提问，回答员工的新问题。 */
+  /** 结果页追加提问：结合该词笔记/追问/历史提问，回答员工的新问题（非流式，Mock 确定性）。 */
   answerQuestion(input: AnswerQuestionInput): Promise<{ answer: string }>;
+
+  /** 结果页追加提问的流式版：逐段产出思考过程/正文。
+   *  DeepSeek 走真流式；Mock 把 answerQuestion 的完整回答确定性切片模拟。 */
+  answerStream(input: AnswerQuestionInput): AsyncIterable<AnswerChunk>;
 }
 
 /** 空记忆标签（画像尚未建立时的初值）。 */

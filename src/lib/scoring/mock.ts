@@ -14,6 +14,7 @@
 // ===========================================================================
 
 import {
+  AnswerChunk,
   AnswerQuestionInput,
   EMPTY_TAGS,
   FinalizeInput,
@@ -270,6 +271,14 @@ export class MockScoringService implements ScoringService {
       `可以从核心原理、一个典型例子，以及它在「${pos}」工作中的应用三层来理解。` +
       `结合你这次的笔记，建议再补一个具体场景，把概念落到能动手的程度。`;
     return { answer };
+  }
+
+  /** 把完整回答确定性切片，模拟流式（无 reasoning）。切片粒度固定，便于快照断言。 */
+  async *answerStream(input: AnswerQuestionInput): AsyncGenerator<AnswerChunk> {
+    const full = (await this.answerQuestion(input)).answer;
+    for (let i = 0; i < full.length; i += 12) {
+      yield { type: "answer", text: full.slice(i, i + 12) };
+    }
   }
 }
 

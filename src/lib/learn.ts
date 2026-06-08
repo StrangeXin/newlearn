@@ -6,32 +6,27 @@
 // ===========================================================================
 
 import { prisma } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
 import { runWithAiTrace, type AiTrace } from "@/lib/ai-log";
 import { getLearnerContext } from "@/lib/learner";
+import { awardLedgerOnce } from "@/lib/ledger";
+import {
+  ANSWER_MAX,
+  DAILY_COMPLETION_LIMIT,
+  NOTE_MAX,
+  NOTE_MIN,
+  QUESTION_MAX,
+} from "@/lib/learn-limits";
 import { applyMemoryUpdate } from "@/lib/memory";
 import {
   type AnswerChunk,
   type AnswerQuestionInput,
-  getScoringProvider,
   getScoringService,
   type Keyword,
   PASS_THRESHOLD,
 } from "@/lib/scoring";
-import {
-  streamAnswerDeepSeek,
-  streamFinalizeDeepSeek,
-  streamSubmitNoteDeepSeek,
-} from "@/lib/scoring/deepseek";
 
-export const NOTE_MIN = 100;
-export const NOTE_MAX = 2000;
-/** 每条追问回答的字数上限。 */
-export const ANSWER_MAX = 1000;
-/** 结果页追加提问的字数上限。 */
-export const QUESTION_MAX = 1000;
-/** 每天最多新完成多少个关键词（重刷已完成的词不计入）。 */
-export const DAILY_COMPLETION_LIMIT = 10;
+// 字数 / 节奏常量统一来源（客户端表单与服务端共用），在此再导出给 @/lib/learn 的既有消费者。
+export { ANSWER_MAX, DAILY_COMPLETION_LIMIT, NOTE_MAX, NOTE_MIN, QUESTION_MAX };
 
 /** 当天（本地自然日）已首次通关的关键词数。 */
 export async function countTodayCompletions(userId: string): Promise<number> {
@@ -96,14 +91,18 @@ export async function startAttempt(
   const scInput = { note, keyword: toScoringKeyword(keyword), learner };
   const trace: AiTrace = { phase: "submitNote", userId, keywordId, keywordTerm: keyword.term };
   // 流式时顺手累计思考过程，落库供学习者端「查看 AI 思考」小弹窗回看。
+  // 走不走流式由打分服务按 onReasoning 自行决定（Mock 无 reasoning，直接完成）。
   let reasoning = "";
-  const sc =
-    onReasoning && getScoringProvider() === "deepseek"
-      ? await streamSubmitNoteDeepSeek(scInput, trace, (text) => {
-          reasoning += text;
-          onReasoning(text);
-        })
-      : await runWithAiTrace(trace, () => getScoringService().submitNote(scInput));
+  const sc = await runWithAiTrace(trace, () =>
+    getScoringService().submitNote(scInput, {
+      onReasoning: onReasoning
+        ? (text) => {
+            reasoning += text;
+            onReasoning(text);
+          }
+        : undefined,
+    }),
+  );
 
   const submission = await prisma.submission.create({
     data: { userId, keywordId, noteText: note, status: "AWAITING_ANSWERS" },
@@ -191,13 +190,16 @@ export async function completeAttempt(
   };
   // 流式时累计终评思考过程，落库供「查看 AI 思考」小弹窗回看。
   let reasoning = "";
-  const fin =
-    onReasoning && getScoringProvider() === "deepseek"
-      ? await streamFinalizeDeepSeek(finInput, finTrace, (text) => {
-          reasoning += text;
-          onReasoning(text);
-        })
-      : await runWithAiTrace(finTrace, () => getScoringService().finalize(finInput));
+  const fin = await runWithAiTrace(finTrace, () =>
+    getScoringService().finalize(finInput, {
+      onReasoning: onReasoning
+        ? (text) => {
+            reasoning += text;
+            onReasoning(text);
+          }
+        : undefined,
+    }),
+  );
 
   await prisma.scoring.update({
     where: { id: submission.scoring.id },
@@ -243,27 +245,16 @@ export async function completeAttempt(
 
   // 达标记 1 积分。自愈式：只要进度已完成且尚无 BASE 流水就补发（不依赖一次性的
   // newlyCompleted，避免某次瞬时故障后因 isCompleted 已 true 而永久漏发）。
-  // 幂等由 @@unique([type, keywordProgressId]) 保证：P2002 视为已发，其它错误抛出。
-  let awardedPoint = false;
-  if (progress.isCompleted) {
-    try {
-      await prisma.pointsLedger.create({
-        data: {
-          userId,
-          subjectId,
-          type: "BASE",
-          amount: 1,
-          keywordProgressId: progress.id,
-          memo: `完成关键词「${keyword.term}」`,
-        },
-      });
-      awardedPoint = true;
-    } catch (e) {
-      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) {
-        throw e;
-      }
-    }
-  }
+  // 正负号 / 幂等键 / 幂等语义都收在 ledger seam 里（awardLedgerOnce）。
+  const awardedPoint = progress.isCompleted
+    ? await awardLedgerOnce({
+        type: "BASE",
+        userId,
+        subjectId,
+        keywordProgressId: progress.id,
+        keywordTerm: keyword.term,
+      })
+    : false;
 
   // 更新画像与成长轨迹（每次终评都更新）；失败不影响本次评分结果
   try {
@@ -343,23 +334,19 @@ export async function prepareAsk(
   };
 }
 
-/** 逐段产出思考过程 / 正文；结束后整段落库为一条 LearnerQuestion。deepseek 走真流式，mock 切片模拟。 */
+/** 逐段产出思考过程 / 正文；结束后整段落库为一条 LearnerQuestion。
+ *  流式与否、真流式或切片模拟，都由打分服务的 answerStream 决定（编排层不感知 provider）。
+ *  每次 next 在 runWithAiTrace 里驱动，让底层 answerStream 的审计日志拿到正确归属（ALS）。 */
 export async function* streamAnswer(ctx: AskContext): AsyncGenerator<AnswerChunk> {
   let answer = "";
   let reasoning = "";
-  if (getScoringProvider() === "deepseek") {
-    for await (const chunk of streamAnswerDeepSeek(ctx.input, ctx.trace)) {
-      if (chunk.type === "reasoning") reasoning += chunk.text;
-      else answer += chunk.text;
-      yield chunk;
-    }
-  } else {
-    const full = (await getScoringService().answerQuestion(ctx.input)).answer;
-    for (let i = 0; i < full.length; i += 12) {
-      const text = full.slice(i, i + 12);
-      answer += text;
-      yield { type: "answer", text };
-    }
+  const iter = getScoringService().answerStream(ctx.input)[Symbol.asyncIterator]();
+  for (;;) {
+    const { value, done } = await runWithAiTrace(ctx.trace, () => iter.next());
+    if (done) break;
+    if (value.type === "reasoning") reasoning += value.text;
+    else answer += value.text;
+    yield value;
   }
   await prisma.learnerQuestion.create({
     data: {

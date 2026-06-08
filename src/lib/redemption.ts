@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
+import { writeLedgerTx } from "@/lib/ledger";
 
 /** 单笔兑换金额上限（兼顾 Int32 与业务合理性）。 */
 export const MAX_REDEEM_AMOUNT = 100_000;
@@ -133,15 +134,13 @@ export async function approveRedemption(
     const balance = await balanceIn(tx, r.userId, r.subjectId);
     if (r.amount > balance) throw new Error("该员工积分余额不足，无法通过");
 
-    await tx.pointsLedger.create({
-      data: {
-        userId: r.userId,
-        subjectId: r.subjectId,
-        type: "REDEEM",
-        amount: -r.amount,
-        redemptionId: r.id,
-        memo: `兑换「${r.item}」`,
-      },
+    await writeLedgerTx(tx, {
+      type: "REDEEM",
+      userId: r.userId,
+      subjectId: r.subjectId,
+      redemptionId: r.id,
+      amount: r.amount,
+      item: r.item,
     });
   });
 }

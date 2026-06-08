@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireProfile } from "@/lib/auth/user";
 import {
   getAvailableBalance,
   getPendingRedeemTotal,
@@ -21,11 +21,8 @@ export default async function RedeemPage({
 }: {
   searchParams: Promise<{ subject?: string }>;
 }) {
-  const user = await requireUser();
-
-  // 任何角色都可参与学习与兑换；无资料先去 onboarding
-  const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
-  if (!profile) redirect("/onboarding");
+  // 任何角色都可参与学习与兑换；无资料先去 onboarding（PRD §15.5）
+  const { user } = await requireProfile();
 
   const subjects = await getActiveSubjects();
   if (subjects.length === 0) redirect("/learn");

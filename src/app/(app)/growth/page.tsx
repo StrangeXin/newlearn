@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireProfile } from "@/lib/auth/user";
 import { type DiffLine, lineDiff, parseDiff, parseTags } from "@/lib/memory-diff";
 import { ExpandableText } from "@/components/expandable-text";
 
@@ -85,10 +84,7 @@ const dateFmt = new Intl.DateTimeFormat("zh-CN", {
 });
 
 export default async function GrowthPage() {
-  const user = await requireUser();
-
-  const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
-  if (!profile) redirect("/onboarding");
+  const { user } = await requireProfile();
 
   const [memory, snapshots] = await Promise.all([
     prisma.employeeMemory.findUnique({ where: { userId: user.id } }),

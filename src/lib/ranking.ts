@@ -11,8 +11,7 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { weekStartOf } from "@/lib/schedule";
-
-const BONUS = 100;
+import { RANK_BONUS_POINTS, writeLedgerTx } from "@/lib/ledger";
 
 export interface RankRow {
   userId: string;
@@ -116,20 +115,18 @@ export async function settleChapterWeek(
             avgScore: e.avg,
             rank,
             bonusAwarded: awarded,
-            bonusPoints: awarded ? BONUS : 0,
+            bonusPoints: awarded ? RANK_BONUS_POINTS : 0,
             settledAt: new Date(),
           },
         });
         if (awarded) {
-          await tx.pointsLedger.create({
-            data: {
-              userId: e.userId,
-              subjectId,
-              type: "RANK_BONUS",
-              amount: BONUS,
-              rankingResultId: rr.id,
-              memo: `第${weekIndex}周排名奖励（第${rank}名）`,
-            },
+          await writeLedgerTx(tx, {
+            type: "RANK_BONUS",
+            userId: e.userId,
+            subjectId,
+            rankingResultId: rr.id,
+            weekIndex,
+            rank,
           });
         }
       }

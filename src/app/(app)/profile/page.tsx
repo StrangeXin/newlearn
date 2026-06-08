@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireProfile } from "@/lib/auth/user";
 import { parseTags } from "@/lib/memory-diff";
 import { ExpandableText } from "@/components/expandable-text";
 import { ProfileEditForm } from "./profile-edit-form";
@@ -21,13 +20,8 @@ function Chips({ items, badge }: { items: string[]; badge: string }) {
 }
 
 export default async function ProfilePage() {
-  const user = await requireUser();
-
-  const [profile, memory] = await Promise.all([
-    prisma.employeeProfile.findUnique({ where: { userId: user.id } }),
-    prisma.employeeMemory.findUnique({ where: { userId: user.id } }),
-  ]);
-  if (!profile) redirect("/onboarding");
+  const { user, profile } = await requireProfile();
+  const memory = await prisma.employeeMemory.findUnique({ where: { userId: user.id } });
 
   const tags = parseTags(memory?.tags);
   const hasPortrait = !!memory && memory.updateCount > 0;

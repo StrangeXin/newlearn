@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireUserOnboarded } from "@/lib/auth/user";
 import { getScheduleInfo, isChapterUnlocked, isCycleEnded } from "@/lib/schedule";
 import { getActiveSubjectById } from "@/lib/subject";
 
@@ -12,14 +12,7 @@ export default async function SubjectMapPage({
   params: Promise<{ subjectId: string }>;
 }) {
   const { subjectId } = await params;
-  const user = await requireUser();
-  // 员工首次进来需先填基本资料（onboarding）
-  if (user.role === "EMPLOYEE") {
-    const profile = await prisma.employeeProfile.findUnique({
-      where: { userId: user.id },
-    });
-    if (!profile) redirect("/onboarding");
-  }
+  const user = await requireUserOnboarded();
 
   // 校验学科存在且已上线；同时取其章节
   const subjectBase = await getActiveSubjectById(subjectId);

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireUserOnboarded } from "@/lib/auth/user";
 import { getPeerRecords } from "@/lib/social";
 import { getActiveSubjects } from "@/lib/subject";
 import { ExpandableText } from "@/components/expandable-text";
@@ -27,11 +26,7 @@ export default async function PeerRecordsPage({
   searchParams: Promise<{ subject?: string }>;
 }) {
   const { userId } = await params;
-  const me = await requireUser();
-  if (me.role === "EMPLOYEE") {
-    const profile = await prisma.employeeProfile.findUnique({ where: { userId: me.id } });
-    if (!profile) redirect("/onboarding");
-  }
+  const me = await requireUserOnboarded();
 
   const subjects = await getActiveSubjects();
   if (subjects.length === 0) redirect("/learn");

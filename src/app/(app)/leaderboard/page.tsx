@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireUserOnboarded } from "@/lib/auth/user";
 import { getChapterWinners, getLeaderboard } from "@/lib/social";
 import { getActiveSubjects } from "@/lib/subject";
 import { SubjectTabs } from "@/components/subject-tabs";
@@ -13,11 +12,7 @@ export default async function LeaderboardPage({
 }: {
   searchParams: Promise<{ subject?: string }>;
 }) {
-  const user = await requireUser();
-  if (user.role === "EMPLOYEE") {
-    const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
-    if (!profile) redirect("/onboarding");
-  }
+  const user = await requireUserOnboarded();
 
   const subjects = await getActiveSubjects();
   if (subjects.length === 0) redirect("/learn");

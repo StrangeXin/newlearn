@@ -156,6 +156,36 @@ describe("MockScoringService · updateMemory", () => {
   });
 });
 
+describe("MockScoringService · answerStream", () => {
+  const askInput = {
+    keyword,
+    note: strongNote,
+    followups: ["q1"],
+    answers: ["a1"],
+    question: "这个词在产品工作里怎么落地？",
+    learner,
+  };
+
+  async function collect(): Promise<string> {
+    let out = "";
+    for await (const chunk of svc.answerStream(askInput)) {
+      expect(chunk.type).toBe("answer"); // Mock 无 reasoning
+      out += chunk.text;
+    }
+    return out;
+  }
+
+  it("流式切片拼回的完整回答与 answerQuestion 一致", async () => {
+    const streamed = await collect();
+    const whole = (await svc.answerQuestion(askInput)).answer;
+    expect(streamed).toBe(whole);
+  });
+
+  it("完全确定性：两次流式结果相同", async () => {
+    expect(await collect()).toBe(await collect());
+  });
+});
+
 describe("MockScoringService · 章节反思", () => {
   it("反思问题结合岗位与章节（2-3个）", async () => {
     const qs = await svc.reflectionQuestions({

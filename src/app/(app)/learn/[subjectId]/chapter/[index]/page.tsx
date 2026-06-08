@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireUserOnboarded } from "@/lib/auth/user";
 import { isChapterUnlocked } from "@/lib/schedule";
 import { getActiveSubjectById } from "@/lib/subject";
 
@@ -12,12 +12,7 @@ export default async function ChapterPage({
 }) {
   const { subjectId, index } = await params;
   const chapterIndex = Number.parseInt(index, 10);
-  const user = await requireUser();
-
-  if (user.role === "EMPLOYEE") {
-    const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
-    if (!profile) redirect("/onboarding");
-  }
+  const user = await requireUserOnboarded();
 
   const subject = await getActiveSubjectById(subjectId);
   if (!subject) redirect("/learn");

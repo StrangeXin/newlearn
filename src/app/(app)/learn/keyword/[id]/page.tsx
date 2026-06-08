@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth/user";
+import { requireUserOnboarded } from "@/lib/auth/user";
 import { PASS_THRESHOLD } from "@/lib/scoring";
 import { DAILY_COMPLETION_LIMIT, countTodayCompletions } from "@/lib/learn";
 import { isChapterUnlocked } from "@/lib/schedule";
@@ -29,7 +29,7 @@ export default async function KeywordPage({
 }) {
   const { id } = await params;
   const { new: wantNew } = await searchParams;
-  const user = await requireUser();
+  const user = await requireUserOnboarded();
 
   const keyword = await prisma.keyword.findUnique({
     where: { id },
@@ -38,11 +38,6 @@ export default async function KeywordPage({
   if (!keyword) notFound();
   if (!isChapterUnlocked(keyword.chapter.subject, keyword.chapter.index)) {
     redirect("/learn");
-  }
-
-  if (user.role === "EMPLOYEE") {
-    const profile = await prisma.employeeProfile.findUnique({ where: { userId: user.id } });
-    if (!profile) redirect("/onboarding");
   }
 
   const [progress, history] = await Promise.all([
