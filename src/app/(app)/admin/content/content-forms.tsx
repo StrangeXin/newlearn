@@ -77,11 +77,9 @@ export function KeywordEditor({
   const [state, action, pending] = useActionState(updateKeywordAction, initial);
   const filled = Boolean(description && referencePoints);
   return (
-    <details className="panel px-4 py-3 [&[open]>summary>.kw-caret]:rotate-90">
+    <details className="details-chevron panel px-4 py-3">
       <summary className="flex cursor-pointer select-none items-center gap-2 text-sm font-semibold text-ink">
-        <span className="kw-caret text-xs text-muted transition-transform" aria-hidden>
-          ▶
-        </span>
+        <span className="kw-caret" aria-hidden />
         <span className="min-w-0 flex-1 truncate">{term}</span>
         {filled ? (
           <span className="badge badge-success shrink-0">✓ 已补全</span>

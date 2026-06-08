@@ -110,13 +110,11 @@ export default async function ReflectPage({
           <h2 className="mt-7 text-sm font-semibold text-muted">你的逐题作答</h2>
           <div className="mt-3 space-y-2.5">
             {reflection.questions.map((q, i) => (
-              <details key={i} className="card px-4 py-3 [&[open]>summary>.rc]:rotate-180">
+              <details key={i} open className="card px-4 py-3 details-chevron">
                 <summary className="flex cursor-pointer list-none items-start gap-2 text-sm font-medium text-ink">
                   <span className="text-brand-700">{i + 1}.</span>
                   <span className="flex-1">{q}</span>
-                  <span className="rc shrink-0 text-xs text-muted transition-transform" aria-hidden>
-                    ▾
-                  </span>
+                  <span className="rc shrink-0" aria-hidden />
                 </summary>
                 <p className="mt-2.5 whitespace-pre-wrap border-t border-line pt-2.5 text-sm leading-relaxed text-muted">
                   {reflection.answers[i] || "（未作答）"}

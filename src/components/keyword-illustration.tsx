@@ -14,12 +14,14 @@ export function KeywordIllustrationImage({
   term,
   src,
   compact = false,
+  preview = true,
 }: {
   term: string;
   src?: string | null;
   compact?: boolean;
+  preview?: boolean;
 }) {
-  return (
+  const image = (
     <figure className="overflow-hidden rounded-xl border border-line bg-surface">
       <div className={`relative bg-white ${compact ? "aspect-[3/2]" : "aspect-video"}`}>
         {src ? (
@@ -43,6 +45,40 @@ export function KeywordIllustrationImage({
       </div>
     </figure>
   );
+
+  if (!preview || !src) return image;
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="group relative block w-full text-left"
+          aria-label={`放大查看${term}的手绘配图`}
+        >
+          {image}
+          <span className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-line bg-white/90 text-brand-700 shadow-sm backdrop-blur transition group-hover:bg-brand-600 group-hover:text-white">
+            <Maximize2 className="size-3.5" aria-hidden />
+          </span>
+        </button>
+      </DialogTrigger>
+      <DialogContent className="max-w-[min(96vw,1100px)] p-3 sm:max-w-[min(96vw,1100px)]">
+        <DialogTitle className="sr-only">{term} 的手绘配图</DialogTitle>
+        <DialogDescription className="sr-only">
+          查看关键词手绘配图的大图预览。
+        </DialogDescription>
+        <div className="relative aspect-video overflow-hidden rounded-lg bg-white">
+          <Image
+            src={src}
+            alt={`${term} 的手绘配图大图预览`}
+            fill
+            sizes="96vw"
+            className="object-contain"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function KeywordIllustrationAdminPanel({
@@ -65,32 +101,9 @@ export function KeywordIllustrationAdminPanel({
           <span className="badge badge-muted">待生成</span>
         )}
       </div>
-      <KeywordIllustrationImage term={term} src={src} compact />
-      {src && (
-        <Dialog>
-          <DialogTrigger asChild>
-            <button type="button" className="btn btn-secondary btn-sm mt-3">
-              <Maximize2 className="size-3.5" aria-hidden />
-              放大预览
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-[min(96vw,1100px)] p-3 sm:max-w-[min(96vw,1100px)]">
-            <DialogTitle className="sr-only">{term} 的手绘配图</DialogTitle>
-            <DialogDescription className="sr-only">
-              查看关键词手绘配图的大图预览。
-            </DialogDescription>
-            <div className="relative aspect-video overflow-hidden rounded-lg bg-white">
-              <Image
-                src={src}
-                alt={`${term} 的手绘配图大图预览`}
-                fill
-                sizes="96vw"
-                className="object-contain"
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <div className="max-w-48">
+        <KeywordIllustrationImage term={term} src={src} compact />
+      </div>
     </section>
   );
 }

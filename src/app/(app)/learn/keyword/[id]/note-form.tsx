@@ -55,7 +55,7 @@ export function NoteForm({
           setLen(e.target.value.trim().length);
           scheduleSave(e.target.value);
         }}
-        placeholder="检索后用自己的话总结（100–2000 字）。原理、机制、例子，写明白才算数。"
+        placeholder="查完资料后，用自己的话讲清楚这个关键词（100–2000 字）。可以写它的原理、运作机制、典型例子，以及你觉得最容易混淆的地方。"
         className="textarea"
       />
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

@@ -7,13 +7,10 @@ export interface CertImageData {
   name: string;
   subjectTitle: string;
   totalKeywords: number;
-  completed: number;
   avg: number;
   dateText: string;
-  week: number | null;
+  learningMinutes: number;
   totalChapters: number;
-  reflected: number;
-  reflectionDone: boolean;
   no: string;
 }
 
@@ -84,6 +81,8 @@ export function DownloadCertificate(d: CertImageData) {
     roundRect(ctx, 34, 34, W - 68, H - 68, 20);
     ctx.stroke();
 
+    const contentW = 980;
+    const contentX = (W - contentW) / 2;
     const cx = W / 2;
     ctx.textAlign = "center";
 
@@ -109,74 +108,68 @@ export function DownloadCertificate(d: CertImageData) {
     ctx.fillText("C E R T I F I C A T E", cx, 180);
     // 结业证书
     ctx.fillStyle = C.ink;
-    ctx.font = `800 56px ${FONT}`;
-    ctx.fillText("结业证书", cx, 248);
+    ctx.font = `800 60px ${FONT}`;
+    ctx.fillText("结业证书", cx, 254);
     // 兹证明
     ctx.fillStyle = C.muted;
     ctx.font = `400 20px ${FONT}`;
-    ctx.fillText("兹证明", cx, 318);
+    ctx.fillText("兹证明", cx, 330);
     // 姓名
     ctx.fillStyle = C.brand700;
-    ctx.font = `800 48px ${FONT}`;
-    ctx.fillText(d.name, cx, 382);
+    ctx.font = `800 52px ${FONT}`;
+    ctx.fillText(d.name, cx, 398);
 
     // 主句（单行，自动缩字号以适配宽度，不换行）
-    const sentence =
-      `已完成 ${d.subjectTitle} 全部 ${d.totalKeywords} 个关键词的学习与考核` +
-      (d.reflectionDone ? `，并完成全部 ${d.totalChapters} 章反思` : "") +
-      "。";
-    let fs = 26;
+    const sentence = `恭喜你完成 ${d.subjectTitle} 的完整闯关学习。`;
+    let fs = 25;
     ctx.font = `400 ${fs}px ${FONT}`;
-    while (ctx.measureText(sentence).width > W - 180 && fs > 14) {
+    while (ctx.measureText(sentence).width > contentW - 180 && fs > 14) {
       fs -= 1;
       ctx.font = `400 ${fs}px ${FONT}`;
     }
     ctx.fillStyle = C.ink;
-    ctx.fillText(sentence, cx, 444);
-
-    // 分隔线
-    ctx.strokeStyle = C.line;
-    ctx.lineWidth = 1;
-    hLine(ctx, 200, 492, W - 200);
+    ctx.fillText(sentence, cx, 470);
 
     // 数据栏 4 列
+    ctx.strokeStyle = C.line;
+    ctx.lineWidth = 1;
+    hLine(ctx, contentX + 90, 540, contentX + contentW - 90);
     const stats: { l: string; v: string; c: string }[] = [
-      { l: "通过关键词", v: `${d.completed}/${d.totalKeywords}`, c: C.ink },
-      { l: "平均分", v: String(d.avg), c: C.accent700 },
-      { l: "章节", v: `${d.totalChapters} 章`, c: C.ink },
-      { l: "章节反思", v: `${d.reflected}/${d.totalChapters}`, c: C.ink },
+      { l: "平均终评分", v: String(d.avg), c: C.accent700 },
+      { l: "关键词地图", v: `${d.totalKeywords} 词`, c: C.ink },
+      { l: "完成章节", v: `${d.totalChapters} 章`, c: C.ink },
+      { l: "学习时长", v: `${d.learningMinutes} 分钟`, c: C.ink },
     ];
-    const colW = (W - 300) / 4;
-    const startX = 150 + colW / 2;
+    const colW = (contentW - 180) / 4;
+    const startX = contentX + 90 + colW / 2;
     stats.forEach((st, i) => {
       const x = startX + i * colW;
       ctx.fillStyle = C.muted;
-      ctx.font = `500 16px ${FONT}`;
-      ctx.fillText(st.l, x, 548);
+      ctx.font = `500 15px ${FONT}`;
+      ctx.fillText(st.l, x, 596);
       ctx.fillStyle = st.c;
-      ctx.font = `800 32px ${FONT}`;
-      ctx.fillText(st.v, x, 590);
+      ctx.font = `800 ${st.v.length > 5 ? 25 : 31}px ${FONT}`;
+      ctx.fillText(st.v, x, 638);
     });
-    hLine(ctx, 200, 636, W - 200);
+    hLine(ctx, contentX + 90, 688, contentX + contentW - 90);
 
-    // 页脚：左 完成日期/用时；右 证书编号 + 印章
+    // 页脚：左 完成日期；右 证书编号 + 印章
     ctx.textAlign = "left";
     ctx.fillStyle = C.muted;
     ctx.font = `400 18px ${FONT}`;
-    ctx.fillText(`完成日期  ${d.dateText}`, 120, 712);
-    if (d.week) ctx.fillText(`用时  第 ${d.week} 周完成`, 120, 744);
+    ctx.fillText(`完成日期  ${d.dateText}`, contentX + 90, 782);
 
     ctx.textAlign = "right";
     ctx.fillStyle = C.muted;
     ctx.font = `400 15px ${FONT}`;
-    ctx.fillText("证书编号", W - 230, 702);
+    ctx.fillText("证书编号", contentX + contentW - 170, 772);
     ctx.fillStyle = C.ink;
     ctx.font = `600 20px ${FONT}`;
-    ctx.fillText(d.no, W - 230, 730);
+    ctx.fillText(d.no, contentX + contentW - 170, 802);
 
     // 印章
     ctx.save();
-    ctx.translate(W - 150, 720);
+    ctx.translate(contentX + contentW - 88, 790);
     ctx.rotate((-8 * Math.PI) / 180);
     ctx.strokeStyle = C.accent;
     ctx.lineWidth = 3;

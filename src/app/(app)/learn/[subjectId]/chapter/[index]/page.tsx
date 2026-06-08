@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUserOnboarded } from "@/lib/auth/user";
 import { isChapterUnlocked } from "@/lib/schedule";
 import { getActiveSubjectById } from "@/lib/subject";
+import { UiIllustration } from "@/components/ui-illustration";
 
 export default async function ChapterPage({
   params,
@@ -34,9 +35,11 @@ export default async function ChapterPage({
           ← 闯关地图
         </Link>
         <div className="card mt-6 flex flex-col items-center px-6 py-14 text-center">
-          <span className="map-node map-node-locked h-14 w-14 text-2xl" aria-hidden>
-            🔒
-          </span>
+          <UiIllustration
+            name="subject"
+            alt="尚未解锁的闯关地图手绘插画"
+            className="aspect-[4/3] w-full max-w-xs"
+          />
           <h1 className="mt-5 text-2xl font-extrabold text-ink">第 {chapter.index} 关尚未开放</h1>
           <p className="mt-2 max-w-sm text-muted">
             每周开放一关，第 {chapter.index} 周才解锁。先把已开放的关卡通关。
@@ -75,45 +78,54 @@ export default async function ChapterPage({
 
       {/* 关卡概览 + 继续闯关 */}
       <section className="card mt-3 p-5 sm:p-6">
-        <div className="flex items-start gap-4">
-          <span
-            className={`map-node h-12 w-12 shrink-0 text-lg ${allDone ? "map-node-done" : "map-node-open"}`}
-            aria-hidden
-          >
-            {allDone ? "✓" : chapter.index}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-semibold text-brand-700">第 {chapter.index} 关</div>
-            <h1 className="mt-0.5 text-2xl font-extrabold text-ink">{chapter.title}</h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">{chapter.theme}</p>
-          </div>
-        </div>
+        <div className="grid gap-5 lg:grid-cols-[1fr_230px] lg:items-start">
+          <div>
+            <div className="flex items-start gap-4">
+              <span
+                className={`map-node h-12 w-12 shrink-0 text-lg ${allDone ? "map-node-done" : "map-node-open"}`}
+                aria-hidden
+              >
+                {allDone ? "✓" : chapter.index}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-brand-700">第 {chapter.index} 关</div>
+                <h1 className="mt-0.5 text-2xl font-extrabold text-ink">{chapter.title}</h1>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">{chapter.theme}</p>
+              </div>
+            </div>
 
-        <div className="mt-5 flex items-center gap-3">
-          <div className="progress flex-1">
-            <span style={{ width: `${pct}%` }} />
-          </div>
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-brand-700">
-            {completed}/{chapter.keywords.length} · {pct}%
-          </span>
-        </div>
+            <div className="mt-5 flex items-center gap-3">
+              <div className="progress flex-1">
+                <span style={{ width: `${pct}%` }} />
+              </div>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-brand-700">
+                {completed}/{chapter.keywords.length} · {pct}%
+              </span>
+            </div>
 
-        {nextKeyword ? (
-          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Link href={`/learn/keyword/${nextKeyword.id}`} className="btn btn-primary">
-              {completed > 0 ? "继续闯关" : "开始闯关"} →
-            </Link>
-            <span className="text-sm text-muted">
-              下一个：<span className="font-medium text-ink">{nextKeyword.term}</span>
-            </span>
+            {nextKeyword ? (
+              <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <Link href={`/learn/keyword/${nextKeyword.id}`} className="btn btn-primary">
+                  {completed > 0 ? "继续闯关" : "开始闯关"} →
+                </Link>
+                <span className="text-sm text-muted">
+                  下一个：<span className="font-medium text-ink">{nextKeyword.term}</span>
+                </span>
+              </div>
+            ) : (
+              <div className="mt-5">
+                <span className="badge badge-success">
+                  ✓ 本关 {chapter.keywords.length} 个关键词全部通关
+                </span>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="mt-5">
-            <span className="badge badge-success">
-              ✓ 本关 {chapter.keywords.length} 个关键词全部通关
-            </span>
-          </div>
-        )}
+          <UiIllustration
+            name="chapter"
+            alt="整理 20 个关键词逐个通关的手绘插画"
+            className="aspect-[4/3]"
+          />
+        </div>
       </section>
 
       {allDone && (

@@ -24,12 +24,20 @@ export const SUBJECT_ORDER: Prisma.SubjectOrderByWithRelationInput[] = [
   { createdAt: "asc" },
 ];
 
+/** 员工可见的学科展示排序：入门/普及在前，专业/进阶在后，其余保持原有稳定顺序。 */
+export function sortSubjectsForLearners<T extends { title: string }>(subjects: T[]) {
+  const rank = (title: string) =>
+    title.includes("普及版") ? 0 : title.includes("专业版") ? 1 : 2;
+  return [...subjects].sort((a, b) => rank(a.title) - rank(b.title));
+}
+
 /** 取所有对员工上线的学科（不含关联），按稳定顺序返回。 */
-export function getActiveSubjects() {
-  return prisma.subject.findMany({
+export async function getActiveSubjects() {
+  const subjects = await prisma.subject.findMany({
     where: ACTIVE_SUBJECT_WHERE,
     orderBy: SUBJECT_ORDER,
   });
+  return sortSubjectsForLearners(subjects);
 }
 
 /**

@@ -95,6 +95,15 @@ function formatReferencePoints(points?: string[]): string {
   return points.map((p, i) => `${i + 1}. ${p}`).join("\n");
 }
 
+function currentDateText(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 async function chat(
   cfg: DeepSeekConfig,
   userContent: string,
@@ -370,6 +379,7 @@ async function streamChatJson(
 }
 
 function buildReflectionSummaryPrompt(input: ReflectionSummaryInput): string {
+  const today = currentDateText();
   const qa = input.questions
     .map(
       (q, i) =>
@@ -379,6 +389,8 @@ function buildReflectionSummaryPrompt(input: ReflectionSummaryInput): string {
   return `根据员工对《${input.chapterTitle}》章节反思的回答，产出：
 1) summary：一段面向该员工的中文章节总结（先肯定、再点出如何把本章用于其岗位、给一个可落地的小建议）。
 2) portrait：在【已有画像】基础上更新的 Markdown 画像，重点补充/丰富「## 与岗位结合」小节，保持其它小节结构稳定，便于逐行对比。
+【当前日期】
+${today}（Asia/Shanghai）。
 ${formatLearner(input.learner)}
 【反思问答】
 ${qa}
@@ -419,6 +431,7 @@ export class DeepSeekScoringService implements ScoringService {
   async updateMemory(input: UpdateMemoryInput): Promise<UpdateMemoryResult> {
     const cfg = readConfig();
     const prev = input.learner.memory?.tags ?? EMPTY_TAGS;
+    const today = currentDateText();
     const qa = input.followups
       .map(
         (q, i) =>
@@ -427,6 +440,8 @@ export class DeepSeekScoringService implements ScoringService {
       .join("\n");
 
     const userContent = `请基于该员工本次在关键词「${input.keyword.term}」上的表现，增量更新其学习画像。
+【当前日期】
+${today}（Asia/Shanghai）。
 ${formatLearner(input.learner)}
 【本次表现】
 - 最终得分：${input.finalScore}

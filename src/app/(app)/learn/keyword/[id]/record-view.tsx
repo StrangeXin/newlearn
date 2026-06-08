@@ -62,7 +62,7 @@ export function RecordView({ submission }: { submission: SubmissionRecord }) {
       <div>
         <div className="mb-1 text-xs font-semibold text-muted">我的笔记</div>
         <div className="rounded-xl bg-surface-2 p-3">
-          <ExpandableText text={submission.noteText} markdown />
+          <ExpandableText text={submission.noteText} markdown controls={false} />
         </div>
       </div>
 
@@ -79,6 +79,7 @@ export function RecordView({ submission }: { submission: SubmissionRecord }) {
                 <ExpandableText
                   text={f.answer?.trim() ? f.answer : "（未作答）"}
                   className="text-muted"
+                  controls={false}
                 />
               </div>
             </div>

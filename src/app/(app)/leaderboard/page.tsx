@@ -7,6 +7,13 @@ import { SubjectTabs } from "@/components/subject-tabs";
 
 const medal = ["🥇", "🥈", "🥉"];
 
+function formatMinutes(minutes: number) {
+  if (minutes < 60) return `${minutes} 分钟`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} 小时` : `${hours} 小时 ${rest} 分钟`;
+}
+
 export default async function LeaderboardPage({
   searchParams,
 }: {
@@ -45,7 +52,7 @@ export default async function LeaderboardPage({
               </div>
               <div className="text-xs font-medium text-muted">
                 均分 <span className="text-accent-700">{myRow.avgScore.toFixed(2)}</span> ·{" "}
-                {myRow.completed} 词
+                {myRow.completed} 词 · {formatMinutes(myRow.learningMinutes)}
               </div>
             </div>
             <Link
@@ -113,6 +120,9 @@ export default async function LeaderboardPage({
                     <span className="flex shrink-0 items-center gap-3 text-sm">
                       <span className="hidden tabular-nums text-muted sm:inline">
                         {r.completed} 词
+                      </span>
+                      <span className="hidden tabular-nums text-muted md:inline">
+                        {formatMinutes(r.learningMinutes)}
                       </span>
                       <span className="font-bold tabular-nums text-accent-700">
                         均 {r.avgScore.toFixed(2)}

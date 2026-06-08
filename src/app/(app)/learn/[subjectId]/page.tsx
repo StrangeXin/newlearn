@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUserOnboarded } from "@/lib/auth/user";
 import { getScheduleInfo, isChapterUnlocked, isCycleEnded } from "@/lib/schedule";
 import { getActiveSubjectById } from "@/lib/subject";
+import { UiIllustration } from "@/components/ui-illustration";
 
 // 单个学科的闯关地图。subjectId 来自路由，校验为「已上线」学科。
 export default async function SubjectMapPage({
@@ -157,34 +158,42 @@ export default async function SubjectMapPage({
       {focus && (
         <Link
           href={`/learn/${subject.id}/chapter/${focus.ch.index}`}
-          className="mt-7 block rounded-2xl bg-brand-600 p-6 text-white transition hover:-translate-y-0.5 hover:bg-brand-700 sm:p-7"
+          className="mt-7 grid gap-5 rounded-2xl bg-brand-600 p-6 text-white transition hover:-translate-y-0.5 hover:bg-brand-700 sm:p-7 lg:grid-cols-[1fr_260px] lg:items-center"
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-white/80">
-                {ended ? "继续补学" : focusIsWeek ? "本周任务" : "继续补做"} · 第 {focus.ch.index} 关
+          <div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-white/80">
+                  {ended ? "继续补学" : focusIsWeek ? "本周任务" : "继续补做"} · 第 {focus.ch.index} 关
+                </div>
+                <h2 className="mt-1 text-2xl font-extrabold">{focus.ch.title}</h2>
+                <p className="mt-1.5 line-clamp-1 text-sm text-white/85">{focus.ch.theme}</p>
               </div>
-              <h2 className="mt-1 text-2xl font-extrabold">{focus.ch.title}</h2>
-              <p className="mt-1.5 line-clamp-1 text-sm text-white/85">{focus.ch.theme}</p>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-xl font-extrabold tabular-nums">
+                {focus.ch.index}
+              </span>
             </div>
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-xl font-extrabold tabular-nums">
-              {focus.ch.index}
+            <div className="mt-5 flex items-center gap-3">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25">
+                <div
+                  className="h-full rounded-full bg-white transition-all duration-500"
+                  style={{ width: `${focus.pct}%` }}
+                />
+              </div>
+              <span className="text-xs font-semibold tabular-nums text-white/90">
+                {focus.done}/{focus.total}
+              </span>
+            </div>
+            <span className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-bold text-brand-700">
+              {focus.done > 0 ? "继续闯关" : "开始闯关"} →
             </span>
           </div>
-          <div className="mt-5 flex items-center gap-3">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25">
-              <div
-                className="h-full rounded-full bg-white transition-all duration-500"
-                style={{ width: `${focus.pct}%` }}
-              />
-            </div>
-            <span className="text-xs font-semibold tabular-nums text-white/90">
-              {focus.done}/{focus.total}
-            </span>
-          </div>
-          <span className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-bold text-brand-700">
-            {focus.done > 0 ? "继续闯关" : "开始闯关"} →
-          </span>
+          <UiIllustration
+            name="subject"
+            alt="本周任务闯关地图手绘插画"
+            className="aspect-[4/3] border-white/30"
+            imageClassName="p-2"
+          />
         </Link>
       )}
 

@@ -96,8 +96,41 @@ export interface LeaderRow {
   /** 排名依据：已通关词的「每词最高分」平均值（积分大家差不多，用质量区分）。 */
   avgScore: number;
   completed: number;
+  /** 当前学科累计学习时长（分钟，仅展示，不参与排名）。 */
+  learningMinutes: number;
   /** 当前学科积分（兑换用，仅展示，不参与排名）。 */
   points: number;
+}
+
+function minutesBetween(start: Date, end: Date, max: number): number {
+  const minutes = Math.ceil((end.getTime() - start.getTime()) / 60000);
+  return Math.max(1, Math.min(max, minutes));
+}
+
+async function getLearningMinutesByUser(subjectId: string, userIds: string[]): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  const [submissions, reflections] = await Promise.all([
+    prisma.submission.findMany({
+      where: {
+        userId: { in: userIds },
+        status: "COMPLETED",
+        keyword: { chapter: { subjectId } },
+      },
+      select: { userId: true, createdAt: true, updatedAt: true },
+    }),
+    prisma.chapterReflection.findMany({
+      where: { userId: { in: userIds }, chapter: { subjectId }, summary: { not: "" } },
+      select: { userId: true, createdAt: true, updatedAt: true },
+    }),
+  ]);
+  const byUser = new Map<string, number>();
+  for (const s of submissions) {
+    byUser.set(s.userId, (byUser.get(s.userId) ?? 0) + minutesBetween(s.createdAt, s.updatedAt, 90));
+  }
+  for (const r of reflections) {
+    byUser.set(r.userId, (byUser.get(r.userId) ?? 0) + minutesBetween(r.createdAt, r.updatedAt, 60));
+  }
+  return byUser;
 }
 
 /** 学习榜：按「每词最高分的均分」降序，只取靠前的若干人（不公开落后者）。
@@ -123,17 +156,23 @@ export async function getLeaderboard(
   const nameOf = new Map(users.map((u) => [u.id, u.name]));
   const pointsOf = new Map(byPoints.map((p) => [p.userId, p._sum.amount ?? 0]));
 
-  return byScore
+  const ranked = byScore
     .map((s) => ({
       userId: s.userId,
       name: nameOf.get(s.userId) ?? "",
       avgScore: s._avg.bestFinalScore ?? 0,
       completed: s._count._all,
+      learningMinutes: 0,
       points: pointsOf.get(s.userId) ?? 0,
     }))
     .filter((r) => r.completed > 0)
     .sort((a, b) => b.avgScore - a.avgScore || b.completed - a.completed)
     .slice(0, limit);
+  const learningMinutesOf = await getLearningMinutesByUser(subjectId, ranked.map((r) => r.userId));
+  return ranked.map((r) => ({
+    ...r,
+    learningMinutes: learningMinutesOf.get(r.userId) ?? 0,
+  }));
 }
 
 export interface PeerRecordItem {
@@ -160,6 +199,7 @@ export interface PeerRecordsView {
   totalCompleted: number;
   avgScore: number;
   points: number;
+  learningMinutes: number;
   /** 观看者已解锁的词数（用于提示）。 */
   unlockedCount: number;
   items: PeerRecordItem[];
@@ -249,6 +289,7 @@ export async function getPeerRecords(
     totalCompleted: items.length,
     avgScore: leader.avgScore,
     points: leader.points,
+    learningMinutes: leader.learningMinutes,
     unlockedCount: items.filter((i) => i.unlocked).length,
     items,
     growth,

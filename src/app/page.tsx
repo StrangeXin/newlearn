@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UiIllustration } from "@/components/ui-illustration";
 
 // 「人工智能（普及版）」的 5 章 + 闯关状态：作为 Hero 的闯关地图预览
 const chapters = [
@@ -164,10 +165,19 @@ export default function Home() {
           </div>
 
           {/* 闯关地图预览：人工智能学科的 5 章解锁进度 */}
-          <div className="animate-float-in relative" style={{ animationDelay: "120ms" }}>
+          <div
+            className="animate-float-in relative grid gap-4 sm:grid-cols-[0.88fr_1.12fr] lg:grid-cols-1"
+            style={{ animationDelay: "120ms" }}
+          >
             <div
               className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-brand-100/45"
               aria-hidden
+            />
+            <UiIllustration
+              name="home"
+              alt="100 个关键词闯关地图手绘插画"
+              className="aspect-[4/3] sm:aspect-square lg:aspect-[5/3]"
+              priority
             />
             <div className="card p-5 sm:p-6">
               <div className="flex items-center justify-between">

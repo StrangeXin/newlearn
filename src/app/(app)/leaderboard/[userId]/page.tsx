@@ -18,6 +18,13 @@ function PeerChips({ items, badge }: { items: string[]; badge: string }) {
   );
 }
 
+function formatMinutes(minutes: number) {
+  if (minutes < 60) return `${minutes} 分钟`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} 小时` : `${hours} 小时 ${rest} 分钟`;
+}
+
 export default async function PeerRecordsPage({
   params,
   searchParams,
@@ -57,7 +64,8 @@ export default async function PeerRecordsPage({
         </h1>
         <p className="mt-1.5 text-sm text-muted">
           已通关 <span className="font-semibold text-ink">{data.totalCompleted}</span> 词 · 均分{" "}
-          <span className="font-semibold text-accent-700">{data.avgScore.toFixed(2)}</span>
+          <span className="font-semibold text-accent-700">{data.avgScore.toFixed(2)}</span> · 学习{" "}
+          <span className="font-semibold text-ink">{formatMinutes(data.learningMinutes)}</span>
           {!isMe && locked > 0 && (
             <> · 其中 {locked} 词你还没完成，先去通关才能看 ta 的写法</>
           )}
@@ -104,7 +112,7 @@ export default async function PeerRecordsPage({
           {data.items.map((it) => (
             <li key={it.keywordId} className="card overflow-hidden">
               {it.unlocked ? (
-                <details className="[&[open]>summary>.rc]:rotate-180">
+                <details className="details-chevron">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface-2">
                     <span className="flex min-w-0 items-center gap-2">
                       <span className="badge badge-brand shrink-0">第 {it.chapterIndex} 章</span>
@@ -112,16 +120,14 @@ export default async function PeerRecordsPage({
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="badge badge-success">{it.score} 分</span>
-                      <span className="rc text-xs text-muted transition-transform" aria-hidden>
-                        ▾
-                      </span>
+                      <span className="rc" aria-hidden />
                     </span>
                   </summary>
                   <div className="space-y-3 border-t border-line px-4 py-4">
                     <div>
                       <div className="mb-1 text-xs font-semibold text-muted">笔记</div>
                       <div className="rounded-xl bg-surface-2 p-3">
-                        <ExpandableText text={it.note ?? ""} markdown />
+                        <ExpandableText text={it.note ?? ""} markdown controls={false} />
                       </div>
                     </div>
                     {it.followups && it.followups.length > 0 && (
@@ -137,6 +143,7 @@ export default async function PeerRecordsPage({
                               <ExpandableText
                                 text={f.answer.trim() ? f.answer : "（未作答）"}
                                 className="text-muted"
+                                controls={false}
                               />
                             </div>
                           </div>

@@ -78,12 +78,10 @@ export function AskForm({
                       </div>
                     </div>
                   ) : (
-                    <details className="mt-2 rounded-lg border border-line bg-surface-2 [&[open]>summary>.rc]:rotate-180">
+                    <details className="details-chevron mt-2 rounded-lg border border-line bg-surface-2">
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-medium text-muted">
                         <span>思考过程</span>
-                        <span className="rc transition-transform" aria-hidden>
-                          ▾
-                        </span>
+                        <span className="rc" aria-hidden />
                       </summary>
                       <div className="max-h-52 overflow-auto whitespace-pre-wrap border-t border-line px-3 py-2 text-xs leading-relaxed text-muted">
                         {item.reasoning}

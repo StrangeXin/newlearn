@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireProfile } from "@/lib/auth/user";
 import { type DiffLine, lineDiff, parseDiff, parseTags } from "@/lib/memory-diff";
@@ -83,6 +84,12 @@ const dateFmt = new Intl.DateTimeFormat("zh-CN", {
   day: "numeric",
 });
 
+function averageScore(snapshots: { finalScore: number }[]) {
+  if (snapshots.length === 0) return 0;
+  const avg = snapshots.reduce((sum, s) => sum + s.finalScore, 0) / snapshots.length;
+  return Math.round(avg * 10) / 10;
+}
+
 export default async function GrowthPage() {
   const { user } = await requireProfile();
 
@@ -96,14 +103,25 @@ export default async function GrowthPage() {
 
   const tags = parseTags(memory?.tags);
   const weaknesses = [...tags.weaknesses, ...tags.blindSpots];
+  const latest = snapshots.at(-1);
+  const avgScore = averageScore(snapshots);
+  const changedCount = snapshots.filter((s) => {
+    const d = parseDiff(s.diff);
+    return d.portraitChanged;
+  }).length;
 
   return (
-    <main className="page-narrow py-8">
-      <div className="animate-float-in">
-        <h1 className="text-2xl font-bold text-ink">成长轨迹</h1>
-        <p className="mt-1.5 max-w-prose leading-relaxed text-muted">
-          每通过一个关键词，画像会重写一次。下面按时间倒序展示每次的改动。
-        </p>
+    <main className="page py-8">
+      <div className="animate-float-in flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">成长轨迹</h1>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
+            系统会根据你的关键词作答与章节反思持续更新画像，记录强项、薄弱点和兴趣方向。
+          </p>
+        </div>
+        <Link href="/profile" className="btn btn-secondary btn-sm">
+          查看我的资料
+        </Link>
       </div>
 
       {snapshots.length === 0 ? (
@@ -121,40 +139,74 @@ export default async function GrowthPage() {
         </div>
       ) : (
         <>
+          <section className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-4">
+              <div className="text-xs font-medium text-brand-700">画像更新</div>
+              <div className="mt-1 text-3xl font-extrabold tabular-nums text-brand-700">
+                {memory?.updateCount ?? 0}
+              </div>
+              <div className="text-xs text-muted">累计更新次数</div>
+            </div>
+            <div className="rounded-xl border border-line bg-surface px-4 py-4">
+              <div className="text-xs font-medium text-muted">最近一次</div>
+              <div className="mt-1 truncate text-lg font-bold text-ink">
+                {latest ? latest.keywordTerm : "暂无"}
+              </div>
+              <div className="text-xs text-muted">{latest ? dateFmt.format(latest.createdAt) : "继续学习后生成"}</div>
+            </div>
+            <div className="rounded-xl border border-accent-400/60 bg-accent-100 px-4 py-4">
+              <div className="text-xs font-medium text-accent-700">平均终评分</div>
+              <div className="mt-1 text-3xl font-extrabold tabular-nums text-accent-700">
+                {avgScore}
+              </div>
+              <div className="text-xs text-muted">基于 {snapshots.length} 次画像记录</div>
+            </div>
+          </section>
+
           {/* 当前画像概览：标签 chips + 完整摘要可展开 */}
-          <section className="card mt-6 p-5 sm:p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold text-ink">当前画像</h2>
-              <span className="badge badge-brand">已更新 {memory?.updateCount ?? 0} 次</span>
+          <section className="mt-6 space-y-6">
+            <div className="card p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-bold text-ink">当前画像</h2>
+                <span className="badge badge-brand">{changedCount} 次正文变化</span>
+              </div>
+              <div className="mt-5 space-y-5">
+                <div>
+                  <div className="field-label">掌握强项</div>
+                  <PortraitChips items={tags.strengths} badge="badge-success" />
+                </div>
+                <div>
+                  <div className="field-label">待加强 / 盲区</div>
+                  <PortraitChips items={weaknesses} badge="badge-muted" />
+                </div>
+                <div>
+                  <div className="field-label">兴趣方向</div>
+                  <PortraitChips items={tags.interests} badge="badge-brand" />
+                </div>
+              </div>
             </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              <div>
-                <div className="field-label">掌握强项</div>
-                <PortraitChips items={tags.strengths} badge="badge-success" />
+
+            <div className="card p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-bold text-ink">画像全文</h2>
+                <span className="text-xs font-medium text-muted">持续随作答更新</span>
               </div>
-              <div>
-                <div className="field-label">待加强 / 盲区</div>
-                <PortraitChips items={weaknesses} badge="badge-muted" />
-              </div>
-              <div>
-                <div className="field-label">兴趣方向</div>
-                <PortraitChips items={tags.interests} badge="badge-brand" />
-              </div>
-            </div>
-            <div className="mt-5">
-              <div className="field-label">画像全文</div>
-              <div className="rounded-xl border border-line bg-surface-2 p-4">
+              <div className="mt-4 rounded-xl border border-line bg-surface-2 p-4">
                 <ExpandableText markdown text={memory?.portrait || "画像正文会随你作答逐步补全。"} />
               </div>
             </div>
           </section>
 
           {/* 时间线：每次更新的 git 风格 diff */}
-          <h2 className="mt-9 text-sm font-semibold text-muted">
-            画像变更 · 共 {snapshots.length} 次
-          </h2>
-          <ol className="relative mt-4 border-l-2 border-line pl-6">
-            {[...snapshots].reverse().map((s) => {
+          <div className="mt-9 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-ink">画像变更</h2>
+              <p className="mt-1 text-sm text-muted">按时间倒序展示，每条可查看画像正文改动。</p>
+            </div>
+            <span className="badge badge-muted">共 {snapshots.length} 次</span>
+          </div>
+          <ol className="relative mt-4 border-l-2 border-line pl-5 sm:pl-6">
+            {[...snapshots].reverse().map((s, i) => {
               const d = parseDiff(s.diff);
               const diffLines = lineDiff(d.prevPortrait, d.newPortrait);
               const noTagChange =
@@ -165,19 +217,20 @@ export default async function GrowthPage() {
                 0;
               const hasAdds = !noTagChange;
               return (
-                <li key={s.id} className="mb-6">
+                <li key={s.id} className="mb-5 last:mb-0">
                   <span className="absolute -left-[9px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 ring-4 ring-bg" />
-                  <div className="card p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-semibold text-ink">
-                        第 {s.seq} 次更新
-                      </span>
-                      <span className="text-muted">·</span>
-                      <span className="text-sm text-ink">
-                        答完「{s.keywordTerm}」
-                      </span>
-                      {scoreBadge(s.finalScore)}
-                      <span className="ml-auto text-xs text-muted">
+                  <div className="card p-4 transition hover:border-brand-200 sm:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-ink">第 {s.seq} 次更新</span>
+                          {scoreBadge(s.finalScore)}
+                        </div>
+                        <div className="mt-1 truncate text-sm text-muted">
+                          答完「<span className="font-medium text-ink">{s.keywordTerm}</span>」
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted">
                         {dateFmt.format(s.createdAt)}
                       </span>
                     </div>
@@ -196,9 +249,15 @@ export default async function GrowthPage() {
                     )}
 
                     {(d.portraitChanged || hasAdds) && (
-                      <details className="mt-3">
-                        <summary className="cursor-pointer text-xs font-semibold text-brand-700">
-                          看画像改了哪几行
+                      <details open={i === 0} className="details-chevron mt-3">
+                        <summary className="flex cursor-pointer list-none justify-end">
+                          <span
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-brand-700 transition hover:border-brand-200 hover:bg-brand-50"
+                            title="看画像改了哪几行"
+                            aria-label="看画像改了哪几行"
+                          >
+                            <Eye className="size-4" aria-hidden />
+                          </span>
                         </summary>
                         <GitDiff lines={diffLines} />
                       </details>

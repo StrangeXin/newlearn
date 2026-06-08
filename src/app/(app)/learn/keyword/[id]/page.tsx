@@ -84,6 +84,25 @@ export default async function KeywordPage({
     progress?.isCompleted ? await getKeywordStat(id, progress.bestFinalScore) : null;
   const illustrationSrc = getKeywordIllustrationSrc({ keywordId: keyword.id, term: keyword.term });
 
+  let nextKeyword: { id: string; term: string } | null = null;
+  if (step === "result" && latest?.isPassed) {
+    const chapterKeywords = await prisma.keyword.findMany({
+      where: { chapterId: keyword.chapterId },
+      orderBy: { orderIndex: "asc" },
+      select: { id: true, term: true },
+    });
+    const completedProgresses = await prisma.keywordProgress.findMany({
+      where: {
+        userId: user.id,
+        keywordId: { in: chapterKeywords.map((k) => k.id) },
+        isCompleted: true,
+      },
+      select: { keywordId: true },
+    });
+    const completedIds = new Set(completedProgresses.map((p) => p.keywordId));
+    nextKeyword = chapterKeywords.find((k) => !completedIds.has(k.id)) ?? null;
+  }
+
   // 整章 20 词全部通关后，提示去做章节反思（反思是上排行榜的前提）
   let needReflection = false;
   if (step === "result" && progress?.isCompleted) {
@@ -98,7 +117,7 @@ export default async function KeywordPage({
   }
 
   return (
-    <main className="page-narrow py-8">
+    <main className="page py-8">
       <Link
         href={backHref}
         className="text-sm font-medium text-muted transition hover:text-brand-700"
@@ -120,9 +139,9 @@ export default async function KeywordPage({
         )}
       </div>
 
-      {step === "note" && !dailyLimitReached && illustrationSrc && (
-        <div className="mt-5">
-          <KeywordIllustrationImage term={keyword.term} src={illustrationSrc} />
+      {illustrationSrc && (
+        <div className="mx-auto mt-5 max-w-md">
+          <KeywordIllustrationImage term={keyword.term} src={illustrationSrc} compact />
         </div>
       )}
 
@@ -252,11 +271,21 @@ export default async function KeywordPage({
                 看成长轨迹
               </Link>
             </p>
-            <div className="mt-5 flex justify-center gap-3">
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {nextKeyword && (
+                <Link href={`/learn/keyword/${nextKeyword.id}`} className="btn btn-primary">
+                  下一关：{nextKeyword.term} →
+                </Link>
+              )}
+              {!nextKeyword && needReflection && (
+                <Link href={`${backHref}/reflect`} className="btn btn-primary">
+                  去完成反思 →
+                </Link>
+              )}
               <Link href={`/learn/keyword/${id}?new=1`} className="btn btn-secondary">
                 再来一版
               </Link>
-              <Link href={backHref} className="btn btn-primary">
+              <Link href={backHref} className={nextKeyword || needReflection ? "btn btn-secondary" : "btn btn-primary"}>
                 返回章节
               </Link>
             </div>
@@ -298,7 +327,7 @@ export default async function KeywordPage({
               <li key={s.id} className="card overflow-hidden">
                 <details
                   open={step !== "result" && i === 0}
-                  className="[&[open]>summary>.rec-caret]:rotate-180"
+                  className="details-chevron"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface-2">
                     <span className="flex items-center gap-2">
@@ -309,9 +338,7 @@ export default async function KeywordPage({
                         {s.finalScore} 分
                       </span>
                     </span>
-                    <span className="rec-caret text-xs text-muted transition-transform" aria-hidden>
-                      ▾
-                    </span>
+                    <span className="rec-caret" aria-hidden />
                   </summary>
                   <div className="border-t border-line px-4 py-4">
                     <RecordView submission={s} />

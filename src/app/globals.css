@@ -89,6 +89,35 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+  details > summary {
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details.details-chevron > summary .rc,
+  details.details-chevron > summary .rec-caret,
+  details.details-chevron > summary .kw-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-muted);
+  }
+  details.details-chevron > summary .rc::before,
+  details.details-chevron > summary .rec-caret::before,
+  details.details-chevron > summary .kw-caret::before {
+    content: "›";
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.16s ease;
+  }
+  details.details-chevron[open] > summary .rc::before,
+  details.details-chevron[open] > summary .rec-caret::before,
+  details.details-chevron[open] > summary .kw-caret::before {
+    transform: rotate(90deg);
+  }
   h1,
   h2,
   h3 {
