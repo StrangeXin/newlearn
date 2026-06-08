@@ -35,7 +35,6 @@ export type LedgerEntry =
   | {
       type: "REDEEM";
       userId: string;
-      subjectId: string;
       redemptionId: string;
       amount: number; // 正数金额，落库取负
       item: string;
@@ -63,9 +62,9 @@ function toCreateData(entry: LedgerEntry): Prisma.PointsLedgerUncheckedCreateInp
         memo: `第${entry.weekIndex}周排名奖励（第${entry.rank}名）`,
       };
     case "REDEEM":
+      // 统一钱包：REDEEM 为账号级扣减，不挂学科（subjectId 留空）。
       return {
         userId: entry.userId,
-        subjectId: entry.subjectId,
         type: "REDEEM",
         amount: -Math.abs(entry.amount),
         redemptionId: entry.redemptionId,

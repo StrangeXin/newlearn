@@ -37,6 +37,21 @@ enum RedemptionStatus {
   REJECTED
 }
 
+/// 兑换物品类别（用于共享目录筛选）
+enum RedemptionCategory {
+  BOOK // 书籍
+  TOOL // 工具 / 软件
+  COURSE // 课程 / 会员
+  OTHER // 其他
+}
+
+/// 共享反馈的倾向（可选）
+enum FeedbackSentiment {
+  UP // 推荐
+  MEH // 一般
+  DOWN // 不推荐
+}
+
 /// 积分流水类型
 enum LedgerType {
   BASE // 关键词通过的基础积分（+1）
@@ -79,6 +94,8 @@ model User {
   rankingResults      RankingResult[]
   redemptions         Redemption[]      @relation("RedemptionApplicant")
   reviewedRedemptions Redemption[]      @relation("RedemptionReviewer")
+  /// 在共享目录里对兑换留的反馈（书/工具点评）
+  redemptionFeedback  RedemptionFeedback[]
   /// 员工自填的基本资料（onboarding，1:1）；尚未填写为 null
   profile             EmployeeProfile?
   /// 系统维护、随学习不断更新的画像与标签（1:1）
@@ -352,8 +369,8 @@ model KeywordProgress {
 model PointsLedger {
   id                String     @id @default(cuid())
   userId            String
-  /// 积分按学科独立核算
-  subjectId         String
+  /// 该笔积分的来源学科：赚分侧（BASE/RANK_BONUS）记来源；REDEEM 为账号级扣减，留空。
+  subjectId         String?
   type              LedgerType
   /// 变动积分：BASE=+1，RANK_BONUS=+100，REDEEM 为负
   amount            Int
@@ -369,7 +386,7 @@ model PointsLedger {
   createdAt         DateTime   @default(now())
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject         Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject         Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   keywordProgress KeywordProgress? @relation(fields: [keywordProgressId], references: [id], onDelete: SetNull)
   rankingResult   RankingResult?   @relation(fields: [rankingResultId], references: [id], onDelete: SetNull)
   redemption      Redemption?      @relation(fields: [redemptionId], references: [id], onDelete: SetNull)
@@ -433,10 +450,12 @@ model Redemption {
   userId       String
   /// 兑换物品/工具名称
   item         String
+  /// 物品类别（共享目录按类别筛选）
+  category     RedemptionCategory @default(OTHER)
   /// 兑换金额（=扣减积分数，正整数）
   amount       Int
-  /// 该兑换所属学科（积分按学科独立核算，扣减须落在对应学科账上）
-  subjectId    String
+  /// 兑换为账号级（统一钱包，不绑学科）；保留可空字段仅作历史/来源记录，新申请留空。
+  subjectId    String?
   /// 凭证/链接，可选
   attachment   String?
   status       RedemptionStatus @default(PENDING)
@@ -447,14 +466,16 @@ model Redemption {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  user       User    @relation("RedemptionApplicant", fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy User?   @relation("RedemptionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  subject    Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  user       User     @relation("RedemptionApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User?    @relation("RedemptionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  subject    Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
 
   /// 反向：审批通过生成的 REDEEM 扣减流水（至多一条，由 PointsLedger 唯一约束保证幂等）
   pointsLedgers PointsLedger[]
   /// 上传的报销凭证（截图/PDF，至多一份）；通过鉴权 API 下载，不公开
   attachmentFile RedemptionAttachment?
+  /// 共享目录里其他员工对该条兑换的反馈
+  feedback       RedemptionFeedback[]
 
   @@index([userId])
   @@index([status])
@@ -479,6 +500,25 @@ model RedemptionAttachment {
   redemption Redemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
 
   @@map("redemption_attachments")
+}
+
+// 共享兑换目录的反馈：任何员工可对某条已通过兑换留一条点评（书/工具是否好用、可否借用）。
+model RedemptionFeedback {
+  id           String             @id @default(cuid())
+  redemptionId String
+  /// 反馈作者
+  userId       String
+  /// 倾向（推荐/一般/不推荐），可选
+  sentiment    FeedbackSentiment?
+  /// 反馈正文
+  content      String
+  createdAt    DateTime           @default(now())
+
+  redemption Redemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([redemptionId])
+  @@map("redemption_feedback")
 }
 
 // ============================================================================

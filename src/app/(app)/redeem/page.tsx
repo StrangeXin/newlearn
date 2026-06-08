@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireProfile } from "@/lib/auth/user";
 import {
+  getAccountBalance,
   getAvailableBalance,
   getPendingRedeemTotal,
-  getSubjectBalance,
+  getPointsLedger,
+  getSharedRedemptions,
 } from "@/lib/redemption";
-import { getActiveSubjects } from "@/lib/subject";
-import { SubjectTabs } from "@/components/subject-tabs";
 import { RedeemForm } from "./redeem-form";
+import { PointsLedger } from "./points-ledger";
+import { SharedCatalog } from "./shared-catalog";
 
 const statusLabel: Record<string, { text: string; cls: string }> = {
   PENDING: { text: "待审批", cls: "badge badge-gold" },
@@ -17,29 +18,22 @@ const statusLabel: Record<string, { text: string; cls: string }> = {
   REJECTED: { text: "已驳回", cls: "badge badge-danger" },
 };
 
-export default async function RedeemPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ subject?: string }>;
-}) {
+// 统一钱包：各门课赚的积分进同一个账号余额，兑换不绑学科（PRD §8）。
+export default async function RedeemPage() {
   // 任何角色都可参与学习与兑换；无资料先去 onboarding（PRD §15.5）
   const { user } = await requireProfile();
 
-  const subjects = await getActiveSubjects();
-  if (subjects.length === 0) redirect("/learn");
-  const { subject: requested } = await searchParams;
-  const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
-  const subjectId = subject.id;
-
-  const [balance, pending, available, redemptions] = await Promise.all([
-    getSubjectBalance(user.id, subjectId),
-    getPendingRedeemTotal(user.id, subjectId),
-    getAvailableBalance(user.id, subjectId),
+  const [balance, pending, available, redemptions, shared, ledger] = await Promise.all([
+    getAccountBalance(user.id),
+    getPendingRedeemTotal(user.id),
+    getAvailableBalance(user.id),
     prisma.redemption.findMany({
-      where: { userId: user.id, subjectId },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       include: { attachmentFile: { select: { id: true } } },
     }),
+    getSharedRedemptions(),
+    getPointsLedger(user.id),
   ]);
 
   const dateFmt = new Intl.DateTimeFormat("zh-CN", {
@@ -53,20 +47,11 @@ export default async function RedeemPage({
 
   return (
     <main className="page py-8">
-      <SubjectTabs subjects={subjects} activeId={subjectId} basePath="/redeem" />
-      <div className="animate-float-in flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">积分兑换</h1>
-          <p className="mt-1.5 text-sm text-muted">
-            1 积分 = 1 元，可多次兑换书、工具或学习服务。
-          </p>
-        </div>
-        {subjects.length > 1 && (
-          <div className="rounded-xl border border-line bg-surface px-4 py-2.5 text-right">
-            <div className="text-xs font-medium text-muted">当前学科</div>
-            <div className="font-semibold text-ink">{subject.title}</div>
-          </div>
-        )}
+      <div className="animate-float-in">
+        <h1 className="text-2xl font-extrabold text-ink sm:text-3xl">积分兑换</h1>
+        <p className="mt-1.5 text-sm text-muted">
+          1 积分 = 1 元。各门课赚的积分进同一个钱包，可合并兑换书、工具或学习服务。
+        </p>
       </div>
 
       <section className="animate-float-in mt-6 overflow-hidden rounded-2xl border border-accent-400/60 bg-surface">
@@ -112,7 +97,7 @@ export default async function RedeemPage({
             </div>
             <span className="badge badge-gold shrink-0">可用 {available}</span>
           </div>
-          <RedeemForm available={available} subjectId={subjectId} />
+          <RedeemForm available={available} />
         </section>
 
         <section>
@@ -196,6 +181,26 @@ export default async function RedeemPage({
               })}
             </ul>
           )}
+        </section>
+
+        <section>
+          <div className="mb-3">
+            <h2 className="text-lg font-bold text-ink">积分流水</h2>
+            <p className="mt-1 text-sm text-muted">
+              每一笔积分的来源与去向——哪门课通关、拿了排名奖励、兑换扣了多少，都在这里。
+            </p>
+          </div>
+          <PointsLedger entries={ledger} />
+        </section>
+
+        <section>
+          <div className="mb-3">
+            <h2 className="text-lg font-bold text-ink">大家兑换了什么</h2>
+            <p className="mt-1 text-sm text-muted">
+              全员已通过的兑换（跨学科）。买了书或工具，可以找持有人借用、共用，也欢迎留下反馈供大家参考。
+            </p>
+          </div>
+          <SharedCatalog items={shared} />
         </section>
       </div>
     </main>

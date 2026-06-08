@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
-import { getScheduleInfo } from "@/lib/schedule";
-import { getFinanceStats, getProgressOverview, getQualityStats } from "@/lib/stats";
+import { getFinanceStats, getLearnerRoster, getQualityStats } from "@/lib/stats";
 import { getActiveSubjects } from "@/lib/subject";
 import { SubjectTabs } from "@/components/subject-tabs";
 
@@ -52,16 +50,17 @@ export default async function AdminStatsPage({
   const subject = subjects.find((s) => s.id === requested) ?? subjects[0];
   const sid = subject.id;
 
-  const [progress, quality, finance] = await Promise.all([
-    getProgressOverview(sid),
+  const [roster, quality, finance] = await Promise.all([
+    getLearnerRoster(sid),
     getQualityStats(sid),
-    getFinanceStats(sid),
+    getFinanceStats(),
   ]);
-  const week = getScheduleInfo(subject).currentWeek;
+  const week = roster.currentWeek;
   const maxDist = Math.max(1, ...quality.distribution.map((d) => d.count));
 
-  const notStarted = progress.rows.filter((r) => r.completed === 0);
-  const startedCount = progress.rows.length - notStarted.length;
+  const total = roster.rows.length;
+  const startedCount = roster.rows.filter((r) => r.status !== "inactive" && r.completed > 0).length;
+  const behindCount = roster.rows.filter((r) => r.behind).length;
   const totalDist = quality.distribution.reduce((s, d) => s + d.count, 0);
 
   return (
@@ -73,18 +72,12 @@ export default async function AdminStatsPage({
         ← 管理后台
       </Link>
       <h1 className="mt-3 text-2xl font-bold text-ink">数据统计</h1>
-      <p className="mt-1 mb-4 text-sm text-muted">
-        学科：{subject.title} · 第 <span className="tabular-nums">{week}</span> 周 ·
-        全员 <span className="tabular-nums">{progress.rows.length}</span> 人，已开始{" "}
-        <span className="tabular-nums">{startedCount}</span> 人
-      </p>
-      <SubjectTabs subjects={subjects} activeId={sid} basePath="/admin/stats" />
 
-      {/* 财务 */}
-      <section className="mt-8">
+      {/* 财务：统一钱包，全公司口径，与学科无关，放在学科切换之上 */}
+      <section className="mt-4">
         <SectionHead
-          title="积分与兑换"
-          hint="1 积分 = 1 元报销。在册余额 = 已发 − 已兑；待审批是员工已申请、等你处理的。"
+          title="积分与兑换（全公司）"
+          hint="统一钱包、跨学科汇总。1 积分 = 1 元报销；在册余额 = 已发 − 已兑；待审批是员工已申请、等你处理的。"
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="累计发放积分" value={finance.issued} gold />
@@ -110,8 +103,29 @@ export default async function AdminStatsPage({
         )}
       </section>
 
-      {/* 质量 */}
-      <section className="mt-8">
+      {/* 按学科：学科切换只管下面这块 */}
+      <div className="mt-10 mb-3">
+        <h2 className="text-base font-bold text-ink">按学科看</h2>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">
+          下面的分数质量按所选学科统计；逐人进度与画像见「员工学情」。
+        </p>
+      </div>
+      <SubjectTabs subjects={subjects} activeId={sid} basePath="/admin/stats" />
+      <p className="mt-3 text-sm text-muted">
+        {subject.title} · 第 <span className="tabular-nums">{week}</span> 周 · 全员{" "}
+        <span className="tabular-nums">{total}</span> 人 · 已开始{" "}
+        <span className="tabular-nums">{startedCount}</span> · 落后{" "}
+        <span className="tabular-nums">{behindCount}</span> ·{" "}
+        <Link
+          href={`/admin/learners?subject=${sid}`}
+          className="font-medium text-brand-700 transition hover:text-brand-600"
+        >
+          员工学情 →
+        </Link>
+      </p>
+
+      {/* 质量（按学科） */}
+      <section className="mt-6">
         <SectionHead
           title="分数质量"
           hint="只看已通过（终评 ≥60）的词次。分数分布看大盘水平，最难关键词帮定位哪些词需要补资料。"
@@ -176,58 +190,10 @@ export default async function AdminStatsPage({
         </div>
       </section>
 
-      {/* 进度 */}
-      <section className="mt-8">
-        <SectionHead
-          title="全员进度"
-          hint={`每人已通过的关键词数（满 ${progress.totalKeywords} 词为学满全学科），按完成数从多到少排列。`}
-        />
-        {progress.rows.length === 0 ? (
-          <div className="card p-8 text-center">
-            <p className="text-sm font-medium text-ink">还没人开始学习</p>
-            <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-muted">
-              先到「员工名单」导入员工，进度会在他们通过第一个关键词后出现。
-            </p>
-            <Link href="/admin/users" className="btn btn-secondary btn-sm mt-4">
-              去管理员工名单
-            </Link>
-          </div>
-        ) : (
-          <>
-            <ul className="card divide-y divide-line">
-              {progress.rows.map((r) => {
-                const pct = Math.round((r.completed / progress.totalKeywords) * 100);
-                return (
-                  <li
-                    key={r.userId}
-                    className="flex items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-5"
-                  >
-                    <span className="w-20 shrink-0 truncate text-sm font-medium text-ink sm:w-28">
-                      {r.name}
-                    </span>
-                    <div className="progress h-2 flex-1">
-                      <span style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted sm:w-20">
-                      {r.completed}/{progress.totalKeywords}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-            {notStarted.length > 0 && (
-              <p className="mt-2.5 text-xs leading-relaxed text-muted">
-                还没开始的 {notStarted.length} 人：
-                <span className="text-ink">
-                  {notStarted.map((r) => r.name).join("、")}
-                </span>
-              </p>
-            )}
-          </>
-        )}
-      </section>
-
-      <div className="mt-8 border-t border-line pt-5">
+      <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-5">
+        <Link href={`/admin/learners?subject=${sid}`} className="btn btn-secondary btn-sm">
+          看逐人学情 →
+        </Link>
         <Link href={`/admin/rankings?subject=${sid}`} className="btn btn-secondary btn-sm">
           查看各章排行榜与 top3 发奖 →
         </Link>

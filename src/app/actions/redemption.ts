@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { FeedbackSentiment, RedemptionCategory } from "@/generated/prisma/client";
 import { requireAdmin, requireUser } from "@/lib/auth/user";
-import { getActiveSubjectById } from "@/lib/subject";
 import {
+  addRedemptionFeedback,
   approveRedemption,
   rejectRedemption,
   requestRedemption,
@@ -20,19 +21,27 @@ export interface RedeemState {
   ok?: boolean;
 }
 
+const CATEGORIES = ["BOOK", "TOOL", "COURSE", "OTHER"] as const;
+function parseCategory(v: unknown): RedemptionCategory {
+  const s = String(v ?? "");
+  return (CATEGORIES as readonly string[]).includes(s) ? (s as RedemptionCategory) : "OTHER";
+}
+
+const SENTIMENTS = ["UP", "MEH", "DOWN"] as const;
+function parseSentiment(v: unknown): FeedbackSentiment | null {
+  const s = String(v ?? "");
+  return (SENTIMENTS as readonly string[]).includes(s) ? (s as FeedbackSentiment) : null;
+}
+
 /** 员工发起兑换申请（积分按学科隔离，subjectId 随表单提交；凭证为上传的截图/PDF）。 */
 export async function requestRedemptionAction(
   _prev: RedeemState,
   formData: FormData,
 ): Promise<RedeemState> {
   const user = await requireUser();
-  const subjectId = String(formData.get("subjectId") ?? "");
-  if (!subjectId) return { error: "缺少学科" };
-  const subject = await getActiveSubjectById(subjectId);
-  if (!subject) return { error: "该学科不可用" };
-
   const item = String(formData.get("item") ?? "");
   const amount = Number(formData.get("amount") ?? "0");
+  const category = parseCategory(formData.get("category"));
 
   // 凭证文件可选；上传则校验类型与大小，读成字节交给 lib 落库
   let attachment: RedemptionAttachmentInput | undefined;
@@ -52,7 +61,26 @@ export async function requestRedemptionAction(
   }
 
   try {
-    await requestRedemption(user.id, subjectId, item, amount, attachment);
+    await requestRedemption(user.id, item, amount, category, attachment);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "提交失败，请重试" };
+  }
+  revalidatePath("/redeem");
+  return { ok: true };
+}
+
+/** 任何员工对共享目录里某条已通过兑换留反馈（短文本 + 可选倾向）。 */
+export async function addFeedbackAction(
+  _prev: RedeemState,
+  formData: FormData,
+): Promise<RedeemState> {
+  const user = await requireUser();
+  const redemptionId = String(formData.get("redemptionId") ?? "");
+  const content = String(formData.get("content") ?? "");
+  const sentiment = parseSentiment(formData.get("sentiment"));
+  if (!redemptionId) return { error: "缺少条目" };
+  try {
+    await addRedemptionFeedback(user.id, redemptionId, sentiment, content);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "提交失败，请重试" };
   }

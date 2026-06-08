@@ -6,20 +6,12 @@ import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_MB } from "@/lib/upload";
 
 const initial: RedeemState = {};
 
-export function RedeemForm({
-  available,
-  subjectId,
-}: {
-  available: number;
-  subjectId: string;
-}) {
+export function RedeemForm({ available }: { available: number }) {
   const [state, action, pending] = useActionState(requestRedemptionAction, initial);
   const disabled = available <= 0;
 
   return (
     <form action={action} className="space-y-4">
-      {/* 积分按学科隔离：申请绑定当前学科 */}
-      <input type="hidden" name="subjectId" value={subjectId} />
       <div className="space-y-4">
         <div>
           <label htmlFor="redeem-item" className="field-label">
@@ -32,6 +24,18 @@ export function RedeemForm({
             placeholder="如：技术书籍《深度学习》、ChatGPT Plus 会员…"
             className="input"
           />
+        </div>
+        <div>
+          <label htmlFor="redeem-category" className="field-label">
+            类别
+          </label>
+          <select id="redeem-category" name="category" defaultValue="OTHER" className="input">
+            <option value="BOOK">书籍</option>
+            <option value="TOOL">工具 / 软件</option>
+            <option value="COURSE">课程 / 会员</option>
+            <option value="OTHER">其他</option>
+          </select>
+          <p className="field-hint mt-1">通过后会出现在「大家兑换了什么」，方便同事借用或共用。</p>
         </div>
         <div>
           <label htmlFor="redeem-amount" className="field-label">

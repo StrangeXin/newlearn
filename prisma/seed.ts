@@ -406,14 +406,14 @@ async function main() {
   await seedChapterCompletion(pro.id, proStart, "王五", { position: "后端工程师", department: "平台组", level: "P7/7年", background: "分布式系统", aiFamiliarity: "熟练（用过一些工具）", applicationAreas: "推理服务、网关、可观测" }, 1, 90);
   await seedChapterCompletion(pro.id, proStart, "吴十", { position: "数据工程师", department: "数据平台", level: "P6/5年", background: "大数据与数仓", aiFamiliarity: "了解（知道一些概念）", applicationAreas: "特征平台、向量检索" }, 1, 80);
 
-  // 给李四种一个待审兑换（普及版积分），演示审批流
+  // 给李四种一个待审兑换，演示审批流（统一钱包，账号级，不绑学科）
   const liSi = await prisma.user.findUnique({ where: { loginName: "李四" } });
   if (liSi) {
     await prisma.redemption.create({
       data: {
         userId: liSi.id,
-        subjectId: popular.id,
         item: "技术书籍《深度学习》",
+        category: "BOOK",
         amount: 3,
         status: "PENDING",
       },

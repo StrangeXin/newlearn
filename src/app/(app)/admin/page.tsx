@@ -57,6 +57,11 @@ const NAV_ITEMS = [
     desc: "学习进度、笔记质量、积分财务",
   },
   {
+    href: "/admin/learners",
+    title: "员工学情",
+    desc: "逐人看进度、画像与成长轨迹",
+  },
+  {
     href: "/admin/ai-logs",
     title: "AI 调用记录",
     desc: "审查每次 AI 打分的上下文与过程",

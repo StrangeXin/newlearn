@@ -175,6 +175,74 @@ export async function getLeaderboard(
   }));
 }
 
+export interface PointsLeader {
+  userId: string;
+  name: string;
+  /** 累计获得 = 通关 + 排名奖励（跨学科，不受兑换影响）。 */
+  earned: number;
+  base: number;
+  bonus: number;
+}
+
+/**
+ * 积分总榜（全平台·跨学科）：按**累计获得**（BASE 通关 + RANK_BONUS 排名奖励之和）降序。
+ * 不受兑换影响——花了分也不掉榜（荣誉榜，统一钱包，见 ADR-0001）。
+ */
+export async function getPointsLeaderboard(limit = 10): Promise<PointsLeader[]> {
+  const [grouped, users] = await Promise.all([
+    prisma.pointsLedger.groupBy({
+      by: ["userId", "type"],
+      where: { type: { in: ["BASE", "RANK_BONUS"] } },
+      _sum: { amount: true },
+    }),
+    prisma.user.findMany({ select: { id: true, name: true } }),
+  ]);
+  const nameOf = new Map(users.map((u) => [u.id, u.name]));
+  const acc = new Map<string, { base: number; bonus: number }>();
+  for (const g of grouped) {
+    const cur = acc.get(g.userId) ?? { base: 0, bonus: 0 };
+    if (g.type === "BASE") cur.base += g._sum.amount ?? 0;
+    else cur.bonus += g._sum.amount ?? 0;
+    acc.set(g.userId, cur);
+  }
+  return [...acc.entries()]
+    .map(([userId, v]) => ({
+      userId,
+      name: nameOf.get(userId) ?? "",
+      earned: v.base + v.bonus,
+      base: v.base,
+      bonus: v.bonus,
+    }))
+    .filter((r) => r.earned > 0)
+    .sort((a, b) => b.earned - a.earned)
+    .slice(0, limit);
+}
+
+export interface MyPointsStanding {
+  /** 累计获得（跨学科）。 */
+  earned: number;
+  /** 在积分总榜里的名次（标准竞赛排名，并列同名次）；尚无积分为 null。 */
+  rank: number | null;
+  /** 总榜上榜人数（有积分者）。 */
+  total: number;
+}
+
+/** 当前用户在积分总榜（累计获得）里的名次与积分——含未进 top10 的情况。 */
+export async function getMyPointsRank(userId: string): Promise<MyPointsStanding> {
+  const grouped = await prisma.pointsLedger.groupBy({
+    by: ["userId"],
+    where: { type: { in: ["BASE", "RANK_BONUS"] } },
+    _sum: { amount: true },
+  });
+  const earners = grouped
+    .map((g) => ({ userId: g.userId, earned: g._sum.amount ?? 0 }))
+    .filter((e) => e.earned > 0);
+  const mine = earners.find((e) => e.userId === userId)?.earned ?? 0;
+  if (mine <= 0) return { earned: 0, rank: null, total: earners.length };
+  const rank = 1 + earners.filter((e) => e.earned > mine).length; // 标准竞赛排名，并列同名次
+  return { earned: mine, rank, total: earners.length };
+}
+
 export interface PeerRecordItem {
   keywordId: string;
   term: string;

@@ -9,8 +9,11 @@
 // ===========================================================================
 
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@/generated/prisma/client";
+import type { FeedbackSentiment, Prisma, RedemptionCategory } from "@/generated/prisma/client";
 import { writeLedgerTx } from "@/lib/ledger";
+
+/** 共享反馈正文上限。 */
+export const MAX_FEEDBACK_LEN = 500;
 
 /** 单笔兑换金额上限（兼顾 Int32 与业务合理性）。 */
 export const MAX_REDEEM_AMOUNT = 100_000;
@@ -24,61 +27,77 @@ export interface RedemptionAttachmentInput {
 
 type Tx = Prisma.TransactionClient;
 
-/** 对 (userId, subjectId) 账户加事务级 advisory 锁，串行化同账户的申请/审批。 */
-async function lockAccount(tx: Tx, userId: string, subjectId: string): Promise<void> {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${userId}:${subjectId}`}))`;
+/** 对 userId 账户加事务级 advisory 锁，串行化同一账号的申请/审批（统一钱包，不分学科）。 */
+async function lockAccount(tx: Tx, userId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`redeem:${userId}`}))`;
 }
 
-async function balanceIn(tx: Tx, userId: string, subjectId: string): Promise<number> {
-  const agg = await tx.pointsLedger.aggregate({
-    where: { userId, subjectId },
-    _sum: { amount: true },
-  });
+/** 账号积分余额（统一钱包：全部流水求和，跨学科）。 */
+async function balanceIn(tx: Tx, userId: string): Promise<number> {
+  const agg = await tx.pointsLedger.aggregate({ where: { userId }, _sum: { amount: true } });
   return agg._sum.amount ?? 0;
 }
 
-async function pendingIn(tx: Tx, userId: string, subjectId: string): Promise<number> {
+async function pendingIn(tx: Tx, userId: string): Promise<number> {
   const agg = await tx.redemption.aggregate({
-    where: { userId, subjectId, status: "PENDING" },
+    where: { userId, status: "PENDING" },
     _sum: { amount: true },
   });
   return agg._sum.amount ?? 0;
 }
 
-/** 某学科的积分余额（流水求和）。 */
-export async function getSubjectBalance(
-  userId: string,
-  subjectId: string,
-): Promise<number> {
-  return balanceIn(prisma, userId, subjectId);
+/** 账号积分余额（统一钱包，跨学科流水求和）。 */
+export async function getAccountBalance(userId: string): Promise<number> {
+  return balanceIn(prisma, userId);
 }
 
-/** 待审批申请占用的额度。 */
-export async function getPendingRedeemTotal(
-  userId: string,
-  subjectId: string,
-): Promise<number> {
-  return pendingIn(prisma, userId, subjectId);
+/** 待审批申请占用的额度（账号级）。 */
+export async function getPendingRedeemTotal(userId: string): Promise<number> {
+  return pendingIn(prisma, userId);
 }
 
-/** 可用余额 = 已结算余额 − 待审批占用。 */
-export async function getAvailableBalance(
-  userId: string,
-  subjectId: string,
-): Promise<number> {
+/** 可用余额 = 账号余额 − 待审批占用。 */
+export async function getAvailableBalance(userId: string): Promise<number> {
   const [balance, pending] = await Promise.all([
-    getSubjectBalance(userId, subjectId),
-    getPendingRedeemTotal(userId, subjectId),
+    getAccountBalance(userId),
+    getPendingRedeemTotal(userId),
   ]);
   return balance - pending;
 }
 
-/** 员工发起兑换申请（账户锁内重算 available 再创建，防并发超额）。 */
+export interface LedgerEntryView {
+  id: string;
+  type: "BASE" | "RANK_BONUS" | "REDEEM";
+  amount: number;
+  memo: string;
+  /** 来源学科标题（赚分侧 BASE/RANK_BONUS）；兑换扣减为 null。 */
+  source: string | null;
+  createdAt: Date;
+}
+
+/** 账号积分流水（统一钱包，全部来源，倒序）：每笔的类型/金额/来源/备注/时间。 */
+export async function getPointsLedger(userId: string): Promise<LedgerEntryView[]> {
+  const rows = await prisma.pointsLedger.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: { subject: { select: { title: true } } },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    amount: r.amount,
+    memo: r.memo ?? "",
+    source: r.subject?.title ?? null,
+    createdAt: r.createdAt,
+  }));
+}
+
+/** 员工发起兑换申请（统一钱包：账户锁内重算 available 再创建，防并发超额）。 */
 export async function requestRedemption(
   userId: string,
-  subjectId: string,
   item: string,
   amount: number,
+  category: RedemptionCategory,
   attachment?: RedemptionAttachmentInput,
 ): Promise<void> {
   const trimmedItem = item.trim();
@@ -91,14 +110,13 @@ export async function requestRedemption(
   }
 
   await prisma.$transaction(async (tx) => {
-    await lockAccount(tx, userId, subjectId);
-    const available =
-      (await balanceIn(tx, userId, subjectId)) - (await pendingIn(tx, userId, subjectId));
+    await lockAccount(tx, userId);
+    const available = (await balanceIn(tx, userId)) - (await pendingIn(tx, userId));
     if (amount > available) {
       throw new Error(`可用积分不足（当前可用 ${available}，含已占用的待审批申请）`);
     }
     const redemption = await tx.redemption.create({
-      data: { userId, subjectId, item: trimmedItem, amount },
+      data: { userId, item: trimmedItem, amount, category },
     });
     if (attachment) {
       await tx.redemptionAttachment.create({
@@ -122,7 +140,7 @@ export async function approveRedemption(
   await prisma.$transaction(async (tx) => {
     const r = await tx.redemption.findUnique({ where: { id: redemptionId } });
     if (!r) throw new Error("兑换申请不存在");
-    await lockAccount(tx, r.userId, r.subjectId);
+    await lockAccount(tx, r.userId);
 
     // CAS：只有仍为 PENDING 才能翻成 APPROVED（防并发双重处理 / 覆盖审批人）
     const cas = await tx.redemption.updateMany({
@@ -131,13 +149,12 @@ export async function approveRedemption(
     });
     if (cas.count === 0) throw new Error("该申请已处理过");
 
-    const balance = await balanceIn(tx, r.userId, r.subjectId);
+    const balance = await balanceIn(tx, r.userId);
     if (r.amount > balance) throw new Error("该员工积分余额不足，无法通过");
 
     await writeLedgerTx(tx, {
       type: "REDEEM",
       userId: r.userId,
-      subjectId: r.subjectId,
       redemptionId: r.id,
       amount: r.amount,
       item: r.item,
@@ -155,4 +172,76 @@ export async function rejectRedemption(
     data: { status: "REJECTED", reviewedById: adminId, reviewedAt: new Date() },
   });
   if (cas.count === 0) throw new Error("兑换申请不存在或已处理过");
+}
+
+// ===========================================================================
+// 共享兑换目录（PRD §8.4）：全员已通过兑换跨学科公开，供互相借阅/共用 + 反馈。
+// ===========================================================================
+
+export interface SharedFeedback {
+  id: string;
+  authorName: string;
+  sentiment: FeedbackSentiment | null;
+  content: string;
+  createdAt: Date;
+}
+
+export interface SharedRedemption {
+  id: string;
+  item: string;
+  category: RedemptionCategory;
+  ownerName: string;
+  amount: number;
+  createdAt: Date;
+  feedback: SharedFeedback[];
+}
+
+/** 全员已通过(APPROVED)兑换，跨学科、按通过时间倒序，带持有人与反馈（「大家兑换了什么」）。 */
+export async function getSharedRedemptions(): Promise<SharedRedemption[]> {
+  const rows = await prisma.redemption.findMany({
+    where: { status: "APPROVED" },
+    orderBy: [{ reviewedAt: "desc" }, { createdAt: "desc" }],
+    include: {
+      user: { select: { name: true } },
+      feedback: {
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { name: true } } },
+      },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    item: r.item,
+    category: r.category,
+    ownerName: r.user.name,
+    amount: r.amount,
+    createdAt: r.reviewedAt ?? r.createdAt,
+    feedback: r.feedback.map((f) => ({
+      id: f.id,
+      authorName: f.user.name,
+      sentiment: f.sentiment,
+      content: f.content,
+      createdAt: f.createdAt,
+    })),
+  }));
+}
+
+/** 任何员工对某条已通过兑换留一条反馈（短文本 + 可选倾向）。 */
+export async function addRedemptionFeedback(
+  userId: string,
+  redemptionId: string,
+  sentiment: FeedbackSentiment | null,
+  content: string,
+): Promise<void> {
+  const text = content.trim();
+  if (!text) throw new Error("请填写反馈内容");
+  if (text.length > MAX_FEEDBACK_LEN) throw new Error(`反馈不超过 ${MAX_FEEDBACK_LEN} 字`);
+  const redemption = await prisma.redemption.findUnique({
+    where: { id: redemptionId },
+    select: { status: true },
+  });
+  if (!redemption || redemption.status !== "APPROVED") throw new Error("该兑换不可反馈");
+  await prisma.redemptionFeedback.create({
+    data: { redemptionId, userId, sentiment, content: text },
+  });
 }
