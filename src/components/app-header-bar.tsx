@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { logoutAction } from "@/app/actions/auth";
 
 export interface NavItem {
@@ -21,7 +22,24 @@ export function AppHeaderBar({
   roleLabel: string;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const close = () => setOpen(false);
+  const active = (href: string) =>
+    pathname === href ||
+    pathname.startsWith(`${href}/`) ||
+    (href === "/learn" && pathname.startsWith("/learn/keyword/"));
+  const navClass = (href: string) => {
+    const isActive = active(href);
+    return isActive
+      ? "relative whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-bold text-brand-700 transition after:absolute after:bottom-0 after:left-2.5 after:right-2.5 after:h-0.5 after:rounded-full after:bg-brand-600 hover:bg-brand-50"
+      : "whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted transition hover:bg-brand-50 hover:text-brand-700";
+  };
+  const mobileNavClass = (href: string) => {
+    const isActive = active(href);
+    return isActive
+      ? "border-l-2 border-brand-600 bg-brand-50 px-3 py-2.5 text-sm font-bold text-brand-700"
+      : "rounded-lg px-3 py-2.5 text-sm font-medium text-ink transition hover:bg-brand-50 hover:text-brand-700";
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md print:hidden">
@@ -43,7 +61,7 @@ export function AppHeaderBar({
             <Link
               key={item.href}
               href={item.href}
-              className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted transition hover:bg-brand-50 hover:text-brand-700"
+              className={navClass(item.href)}
             >
               {item.label}
             </Link>
@@ -90,7 +108,7 @@ export function AppHeaderBar({
                 key={item.href}
                 href={item.href}
                 onClick={close}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink transition hover:bg-brand-50 hover:text-brand-700"
+                className={mobileNavClass(item.href)}
               >
                 {item.label}
               </Link>

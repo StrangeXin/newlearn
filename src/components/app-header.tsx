@@ -10,17 +10,17 @@ export function AppHeader({ user }: { user: User }) {
   const nav: NavItem[] = isAdmin
     ? [
         { href: "/admin", label: "管理后台" },
-        { href: "/learn", label: "闯关" },
+        { href: "/learn", label: "开始闯关" },
         { href: "/leaderboard", label: "排行榜" },
-        { href: "/redeem", label: "兑换" },
-        { href: "/growth", label: "成长" },
+        { href: "/redeem", label: "积分兑换" },
+        { href: "/growth", label: "成长轨迹" },
         { href: "/profile", label: "我的" },
       ]
     : [
-        { href: "/learn", label: "闯关" },
+        { href: "/learn", label: "开始闯关" },
         { href: "/leaderboard", label: "排行榜" },
-        { href: "/redeem", label: "兑换" },
-        { href: "/growth", label: "成长" },
+        { href: "/redeem", label: "积分兑换" },
+        { href: "/growth", label: "成长轨迹" },
         { href: "/profile", label: "我的" },
       ];
 
