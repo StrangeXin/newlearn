@@ -4,7 +4,6 @@ import { useActionState, useState, useTransition } from "react";
 import {
   createSubjectAction,
   importSubjectContentAction,
-  regenerateKeywordIllustrationAction,
   toggleSubjectActiveAction,
   setStartDateAction,
   updateKeywordAction,
@@ -78,10 +77,6 @@ export function KeywordEditor({
   illustrationSrc?: string | null;
 }) {
   const [state, action, pending] = useActionState(updateKeywordAction, initial);
-  const [generating, startGenerate] = useTransition();
-  const [generatedSrc, setGeneratedSrc] = useState(illustrationSrc ?? "");
-  const [generateError, setGenerateError] = useState("");
-  const [generateOk, setGenerateOk] = useState(false);
   const filled = Boolean(description && referencePoints);
   return (
     <details className="panel px-4 py-3 [&[open]>summary>.kw-caret]:rotate-90">
@@ -127,26 +122,9 @@ export function KeywordEditor({
         />
       </div>
         <KeywordIllustrationAdminPanel
-          keywordId={keywordId}
           term={term}
           prompt={illustrationPrompt}
-          src={generatedSrc || illustrationSrc}
-          generating={generating}
-          generateError={generateError}
-          generateOk={generateOk}
-          onRegenerate={(id) => {
-            setGenerateError("");
-            setGenerateOk(false);
-            startGenerate(async () => {
-              const r = await regenerateKeywordIllustrationAction(id);
-              if (r?.error) {
-                setGenerateError(r.error);
-                return;
-              }
-              if (r?.path) setGeneratedSrc(r.path);
-              setGenerateOk(true);
-            });
-          }}
+          src={illustrationSrc}
         />
         <div className="flex items-center gap-2">
           <button type="submit" disabled={pending} className="btn btn-primary btn-sm">

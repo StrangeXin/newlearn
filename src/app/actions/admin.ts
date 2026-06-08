@@ -1,17 +1,11 @@
 "use server";
 
-import { mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { promisify } from "node:util";
-import { execFile } from "node:child_process";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin, requireSuperadmin } from "@/lib/auth/user";
 import { hashPassword } from "@/lib/auth/password";
-import { keywordIllustrationFilePath } from "@/lib/keyword-illustration-assets";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const execFileAsync = promisify(execFile);
 
 function defaultPassword(): string {
   return process.env.DEFAULT_PASSWORD ?? "Aa123456!";
@@ -20,7 +14,6 @@ function defaultPassword(): string {
 export interface AdminState {
   error?: string;
   ok?: boolean;
-  path?: string;
 }
 
 /**
@@ -188,53 +181,6 @@ export async function updateKeywordAction(
   });
   revalidatePath("/admin/content");
   return { ok: true };
-}
-
-/** 重新生成某关键词的手绘配图，保存到 public/keyword-illustrations/<keywordId>.png。 */
-export async function regenerateKeywordIllustrationAction(
-  keywordId: string,
-): Promise<AdminState> {
-  await requireAdmin();
-  if (!keywordId) return { error: "缺少关键词" };
-
-  const keyword = await prisma.keyword.findUnique({
-    where: { id: keywordId },
-    select: { id: true, term: true, illustrationPrompt: true },
-  });
-  if (!keyword) return { error: "关键词不存在" };
-  const prompt = keyword.illustrationPrompt?.trim();
-  if (!prompt) return { error: "请先为该关键词填写并保存配图提示词" };
-
-  const out = keywordIllustrationFilePath(keyword.id);
-  await mkdir(dirname(out), { recursive: true });
-
-  const script = join(process.cwd(), "scripts", "openai-image.sh");
-
-  try {
-    await execFileAsync(
-      "bash",
-      [
-        script,
-        "generate",
-        "--model",
-        "gpt-image-2",
-        "--size",
-        "1536x1024",
-        "--prompt",
-        prompt,
-        "--out",
-        out,
-      ],
-      { timeout: 180_000, maxBuffer: 1024 * 1024 },
-    );
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "生成失败";
-    return { error: msg };
-  }
-
-  revalidatePath("/admin/content");
-  revalidatePath("/learn/keyword/[id]", "page");
-  return { ok: true, path: `/keyword-illustrations/${keyword.id}.png` };
 }
 
 /** 新建空学科。 */

@@ -36,23 +36,13 @@ export function KeywordIllustrationImage({
 }
 
 export function KeywordIllustrationAdminPanel({
-  keywordId,
   term,
   prompt,
   src,
-  onRegenerate,
-  generating = false,
-  generateError = "",
-  generateOk = false,
 }: {
-  keywordId: string;
   term: string;
   prompt?: string | null;
   src?: string | null;
-  onRegenerate?: (keywordId: string) => void;
-  generating?: boolean;
-  generateError?: string;
-  generateOk?: boolean;
 }) {
   return (
     <section className="rounded-xl border border-line bg-surface-2 p-3">
@@ -72,24 +62,11 @@ export function KeywordIllustrationAdminPanel({
         <div>
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs font-semibold text-muted">生成提示词</div>
-            {onRegenerate && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={generating}
-                onClick={() => onRegenerate(keywordId)}
-              >
-                {generating ? "生成中…" : src ? "重新生成" : "生成配图"}
-              </button>
-            )}
+            <span className="text-xs text-muted">离线生成后放入 public/keyword-illustrations</span>
           </div>
           <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 text-xs leading-relaxed text-muted">
             {prompt?.trim() || "还没有为这个关键词填写专属配图提示词。"}
           </pre>
-          {generateError && <p className="field-error mt-2">{generateError}</p>}
-          {generateOk && (
-            <p className="mt-2 text-xs font-medium text-success-600">配图已生成 ✓</p>
-          )}
         </div>
       </div>
     </section>
