@@ -172,7 +172,6 @@ export default async function AdminContentPage({
                           term={kw.term}
                           description={kw.description ?? ""}
                           referencePoints={kw.referencePoints ?? ""}
-                          illustrationPrompt={kw.illustrationPrompt ?? ""}
                           illustrationSrc={getKeywordIllustrationSrc({
                             keywordId: kw.id,
                             term: kw.term,

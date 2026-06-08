@@ -169,14 +169,12 @@ export async function updateKeywordAction(
   const id = String(formData.get("keywordId") ?? "");
   const description = String(formData.get("description") ?? "").trim();
   const referencePoints = String(formData.get("referencePoints") ?? "").trim();
-  const illustrationPrompt = String(formData.get("illustrationPrompt") ?? "").trim();
   if (!id) return { error: "缺少关键词" };
   await prisma.keyword.update({
     where: { id },
     data: {
       description: description || null,
       referencePoints: referencePoints || null,
-      illustrationPrompt: illustrationPrompt || null,
     },
   });
   revalidatePath("/admin/content");

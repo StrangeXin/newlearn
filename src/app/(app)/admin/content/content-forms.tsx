@@ -66,14 +66,12 @@ export function KeywordEditor({
   term,
   description,
   referencePoints,
-  illustrationPrompt,
   illustrationSrc,
 }: {
   keywordId: string;
   term: string;
   description: string;
   referencePoints: string;
-  illustrationPrompt: string;
   illustrationSrc?: string | null;
 }) {
   const [state, action, pending] = useActionState(updateKeywordAction, initial);
@@ -108,24 +106,7 @@ export function KeywordEditor({
           className="textarea"
         />
       </div>
-      <div>
-        <label className="field-label">配图提示词</label>
-        <p className="field-hint mb-1">
-          逐词写专属提示词：先消化 term / 简介 / 考核要点，再套 Ian 小黑风格。小黑必须承担核心动作，画面只讲一个认知结构。
-        </p>
-        <textarea
-          name="illustrationPrompt"
-          rows={8}
-          defaultValue={illustrationPrompt}
-          className="textarea font-mono text-xs"
-          placeholder="为这个关键词单独写一版 pre-learning illustration prompt..."
-        />
-      </div>
-        <KeywordIllustrationAdminPanel
-          term={term}
-          prompt={illustrationPrompt}
-          src={illustrationSrc}
-        />
+        <KeywordIllustrationAdminPanel term={term} src={illustrationSrc} />
         <div className="flex items-center gap-2">
           <button type="submit" disabled={pending} className="btn btn-primary btn-sm">
             保存

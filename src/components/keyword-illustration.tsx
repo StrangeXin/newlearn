@@ -1,4 +1,14 @@
+"use client";
+
 import Image from "next/image";
+import { Maximize2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function KeywordIllustrationImage({
   term,
@@ -37,11 +47,9 @@ export function KeywordIllustrationImage({
 
 export function KeywordIllustrationAdminPanel({
   term,
-  prompt,
   src,
 }: {
   term: string;
-  prompt?: string | null;
   src?: string | null;
 }) {
   return (
@@ -49,7 +57,7 @@ export function KeywordIllustrationAdminPanel({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-xs font-semibold text-brand-700">关键词手绘配图</div>
-          <p className="mt-0.5 text-xs text-muted">根据关键词、简介和考核要点生成。</p>
+          <p className="mt-0.5 text-xs text-muted">由开发人员离线生成并放入项目资源。</p>
         </div>
         {src ? (
           <span className="badge badge-success">已有图片</span>
@@ -57,18 +65,32 @@ export function KeywordIllustrationAdminPanel({
           <span className="badge badge-muted">待生成</span>
         )}
       </div>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <KeywordIllustrationImage term={term} src={src} compact />
-        <div>
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-muted">生成提示词</div>
-            <span className="text-xs text-muted">离线生成后放入 public/keyword-illustrations</span>
-          </div>
-          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-3 text-xs leading-relaxed text-muted">
-            {prompt?.trim() || "还没有为这个关键词填写专属配图提示词。"}
-          </pre>
-        </div>
-      </div>
+      <KeywordIllustrationImage term={term} src={src} compact />
+      {src && (
+        <Dialog>
+          <DialogTrigger asChild>
+            <button type="button" className="btn btn-secondary btn-sm mt-3">
+              <Maximize2 className="size-3.5" aria-hidden />
+              放大预览
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[min(96vw,1100px)] p-3 sm:max-w-[min(96vw,1100px)]">
+            <DialogTitle className="sr-only">{term} 的手绘配图</DialogTitle>
+            <DialogDescription className="sr-only">
+              查看关键词手绘配图的大图预览。
+            </DialogDescription>
+            <div className="relative aspect-video overflow-hidden rounded-lg bg-white">
+              <Image
+                src={src}
+                alt={`${term} 的手绘配图大图预览`}
+                fill
+                sizes="96vw"
+                className="object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </section>
   );
 }
