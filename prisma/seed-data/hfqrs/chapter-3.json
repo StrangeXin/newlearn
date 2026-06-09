@@ -1,0 +1,107 @@
+{
+  "index": 3,
+  "title": "临床应用·它能在什么场景帮上忙",
+  "theme": "从急诊胸痛到稳定冠心病、从 PCI 术后到心脏康复，看 HFQRS 在真实诊疗链条里到底站在哪个位置、补了常规心电图的哪块短板。",
+  "keywords": [
+    {
+      "term": "静息HFQRS(Resting HFQRS)",
+      "description": "不让患者运动，安静平躺时就记录高频成分。它抓的是除极电学的细微改变，比 ST 段更早，所以能在没症状、ST 还正常时筛出早期缺血或给高危患者评风险。",
+      "referencePoints": "安静状态采集、无需负荷；适合早期缺血筛查与心梗后/高危患者风险评估；优势是不依赖 ST 段、比 ST 更早反映缺血"
+    },
+    {
+      "term": "运动负荷HFQRS(Exercise Stress HFQRS, ES-HFQRS)",
+      "description": "按 Bruce 方案让患者踏车或平板逐级加量，在心肌耗氧攀升时看高频振幅会不会塌下去。负荷下检出缺血的敏感度约 75%，明显高于常规 ST 段分析的约 48%。",
+      "referencePoints": "用 Bruce 方案逐级增加负荷诱发缺血；敏感度约 75% 高于 ST 段约 48%；用于冠心病诊断与风险分层"
+    },
+    {
+      "term": "急性冠脉综合征(Acute Coronary Syndrome, ACS)",
+      "description": "冠脉斑块破裂、血栓导致心肌急性缺血的一大类急症，从不稳定心绞痛到心梗。HFQRS 抓的电学改变在缺血级联里靠前，能为急诊快速判断是否真有缺血多提供一条线索。",
+      "referencePoints": "斑块破裂/血栓引起的急性心肌缺血急症谱；缺血级联中电学改变早于 ST 与症状；HFQRS 为急诊缺血识别提供补充证据"
+    },
+    {
+      "term": "稳定性冠心病(Stable Coronary Artery Disease)",
+      "description": "指冠脉已有相对稳定的狭窄病变这一'解剖/病理状态'，不一定天天发作。HFQRS 在负荷下查高频振幅下降，帮助判断现有狭窄是否已造成有意义的缺血。",
+      "referencePoints": "强调冠脉存在稳定狭窄的病变状态（解剖层面）；负荷 HFQRS 判断狭窄是否引起功能性缺血；与'稳定性心绞痛'是病变 vs 症状的不同视角"
+    },
+    {
+      "term": "无症状心肌缺血(Silent Myocardial Ischemia)",
+      "description": "心肌已经缺血但患者一点不疼、毫无症状，最易漏诊。HFQRS 不依赖症状、也不依赖 ST 段抬高，直接看高频振幅有没有下降，正好补这块盲区。",
+      "referencePoints": "有缺血却无胸痛等症状、常规易漏；HFQRS 不依赖症状即可发现缺血；尤其适合静息筛查无症状高危人群"
+    },
+    {
+      "term": "前降支病变(LAD Lesion)",
+      "description": "前降支供血范围大，一旦狭窄影响面广、风险高。HFQRS 阳性导联数与冠脉病变严重程度相关，对应前壁导联的高频振幅下降可帮助提示该区域缺血。",
+      "referencePoints": "前降支供血范围大、病变后果重；阳性导联数与病变严重程度相关；对应区域导联的高频振幅下降提示该处缺血"
+    },
+    {
+      "term": "非ST段抬高ACS(NSTE-ACS)",
+      "description": "这类急性冠脉综合征 ST 段不抬高，常规心电图可能看着'正常',最容易被放走。HFQRS 不靠 ST 抬高、看的是高频段，能在 ST 沉默时多抓一层缺血证据。",
+      "referencePoints": "ST 段不抬高、常规心电图易判正常而漏诊；HFQRS 不依赖 ST 抬高、查高频段补漏；是 HFQRS 重点推荐的急诊场景"
+    },
+    {
+      "term": "冠脉微循环障碍(Coronary Microvascular Dysfunction, CMVD)",
+      "description": "大的冠脉造影看着不堵，但微小血管功能异常导致心肌缺血，造影正常反而让人放心过头。HFQRS 测的是心肌缺血的电学后果，不管缺血来自大血管还是微循环都可能捕捉到。",
+      "referencePoints": "大血管不狭窄但微循环异常致缺血、造影易判正常；HFQRS 反映缺血电学后果而非血管解剖；为微循环缺血提供功能性线索"
+    },
+    {
+      "term": "PCI术后评估(Post-PCI Assessment)",
+      "description": "放完支架不等于万事大吉，可能有残余狭窄或再缺血。HFQRS 静息或负荷下复查高频振幅，和术前对照，能看支架后这块心肌的缺血到底改善了多少。",
+      "referencePoints": "支架术后仍可能残余狭窄或再缺血；HFQRS 复查评估术后缺血改善情况；与术前基线对照看变化"
+    },
+    {
+      "term": "心梗后风险分层(Post-MI Risk Stratification)",
+      "description": "心梗后要判断谁还在缺血、谁风险高。静息 HFQRS 适合给这类高危患者做评估，高频振幅下降的程度和阳性导联数可作为风险高低的参考。",
+      "referencePoints": "心梗后用于区分残余缺血与高危患者；静息 HFQRS 是该场景适用模式；阳性导联数/振幅下降程度可作风险参考"
+    },
+    {
+      "term": "猝死风险筛查(Sudden Death Risk Screening)",
+      "description": "潜在的缺血或心肌电学异常是猝死隐患。HFQRS 能发现常规心电图漏掉的早期缺血信号，配合信号平均心电图思路，为筛查高危人群多提供一项无创手段。",
+      "referencePoints": "缺血/心肌电学异常是猝死隐患；HFQRS 可捕捉常规漏掉的早期缺血信号；作为无创筛查工具的补充价值"
+    },
+    {
+      "term": "肥厚型心肌病(Hypertrophic Cardiomyopathy, HCM)",
+      "description": "心肌异常增厚的遗传性心肌病，本身就可能伴随心肌内供血不足和电学异常。HFQRS 对高频成分的分析可反映这类患者心肌的电活动改变，辅助评估。",
+      "referencePoints": "心肌异常增厚的心肌病、常伴心肌缺血/电学异常；HFQRS 反映其心肌电活动改变；属专家建议推荐的应用方向"
+    },
+    {
+      "term": "心肌病亚型鉴别(Cardiomyopathy Subtype Differentiation)",
+      "description": "不同类型心肌病的心肌电学特征有差异。HFQRS 提供常规心电图之外的高频维度信息，配合其他检查帮助区分心肌病的不同亚型。",
+      "referencePoints": "不同心肌病亚型电学特征有别；HFQRS 提供高频维度的额外信息；需与其他影像/检查联合鉴别"
+    },
+    {
+      "term": "胸痛中心(Chest Pain Center)",
+      "description": "胸痛中心讲究分秒必争地分诊。HFQRS 静息即可记录、不依赖 ST 抬高，能在快速分诊里多给一条'这胸痛背后是不是真有缺血'的客观依据。",
+      "referencePoints": "胸痛中心需快速分诊、争分夺秒；HFQRS 静息可测、不依赖 ST 抬高利于快速判断；用于辅助识别缺血性胸痛"
+    },
+    {
+      "term": "动态随访监测(Dynamic Follow-up)",
+      "description": "同一患者不同时间多次做 HFQRS，把每次的高频振幅曲线排在一起看趋势，比单次绝对值更说明问题——和自身基线对照，缺血是好转还是加重一目了然。",
+      "referencePoints": "同一患者多次检查纵向比较趋势；与自身基线对照比单次绝对值更有意义；用于观察缺血好转或加重"
+    },
+    {
+      "term": "药物负荷试验(Pharmacological Stress Test)",
+      "description": "对走不动、踏不了车的患者，用药物诱发类似运动的心脏负荷状态，再记录 HFQRS。这样不能运动的人也能做负荷下的高频缺血评估。",
+      "referencePoints": "用药物替代运动诱发心脏负荷；适合无法运动的患者；在药物负荷下评估高频振幅下降"
+    },
+    {
+      "term": "心脏康复监测(Cardiac Rehabilitation Monitoring)",
+      "description": "心脏康复期要边练边盯安全。HFQRS 无创、可重复，能在康复随访中监测运动负荷下心肌是否还有缺血，帮助调整康复强度。",
+      "referencePoints": "康复期需监测运动是否诱发缺血；HFQRS 无创可重复适合反复随访；为调整康复强度提供依据"
+    },
+    {
+      "term": "稳定性心绞痛(Stable Angina)",
+      "description": "指劳累后胸痛、休息缓解这一'症状综合征'，强调患者的发作表现。它和稳定性冠心病的区别在于：后者说的是冠脉狭窄的病变状态，前者说的是这套可预测发作的症状。HFQRS 在负荷下捕捉对应缺血。",
+      "referencePoints": "强调劳累诱发、休息缓解的可预测症状（综合征层面）；与'稳定性冠心病'区别在于症状 vs 病变状态；负荷 HFQRS 用于客观印证缺血发作"
+    },
+    {
+      "term": "植入式装置(Implantable Devices)",
+      "description": "起搏器、ICD 等植入装置的心内电极能贴近心肌长期记录，为心内高频QRS(iHFQRS)铺路——iHFQRS 对短暂缺血比 ST 段更敏感，可做连续监测。",
+      "referencePoints": "植入装置的心内电极贴近心肌可长期记录；为心内高频QRS(iHFQRS)提供采集基础；iHFQRS 对短暂缺血比 ST 更敏感"
+    },
+    {
+      "term": "女性冠心病诊断(CAD Diagnosis in Women)",
+      "description": "女性做常规 ST 段运动试验假阳性偏多，容易误判。HFQRS 看的是高频振幅下降这条独立线索，与 ST 段联合能减少误判、为女性冠心病诊断补上一块。",
+      "referencePoints": "女性 ST 段运动试验假阳性偏多易误判；HFQRS 提供不依赖 ST 的独立缺血线索；与 ST 联合提高女性 CAD 诊断准确性"
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "index": 1,
+  "title": "原理与机制·为什么高频更敏感",
+  "theme": "从心肌除极的电生理出发，讲清缺血为什么会让 QRS 里的高频成分先衰减——给后面的采集、判读、应用打一个'我知道这是在说什么'的底。",
+  "keywords": [
+    {
+      "term": "高频QRS(HFQRS)",
+      "description": "本学科的主角：QRS 波里 150–250Hz 的那一段高频成分。常规心电图把它当噪声滤掉了，但它对早期缺血远比 ST 段敏感。",
+      "referencePoints": "指 QRS 内 150–250Hz 的高频成分；常规心电不分析这一段；它比 ST 段更早反映缺血"
+    },
+    {
+      "term": "常规心电图(Conventional ECG)",
+      "description": "我们平时做的那种心电图，只采集分析 0.05–100Hz 的低频段，高频成分被滤掉了。它是对照基线：HFQRS 看的正是它没看的那部分。",
+      "referencePoints": "只用 0.05–100Hz 低频段；高频成分被滤波丢弃；对早期缺血不如 HFQRS 敏感"
+    },
+    {
+      "term": "微伏级信号(Microvolt-level Signal)",
+      "description": "高频成分的振幅只有微伏(μV)量级，而常规心电信号是毫伏(mV)量级，差了一千倍。这么弱的信号埋在噪声里，得专门处理才提得出来。",
+      "referencePoints": "高频成分仅 μV 级；常规心电是 mV 级、相差约一千倍；信号弱到需专门提取"
+    },
+    {
+      "term": "心肌除极(Myocardial Depolarization)",
+      "description": "心肌细胞电位由负转正、被激活的过程，体表心电图上对应的就是 QRS 波。高频成分正是藏在这段除极电活动里。",
+      "referencePoints": "心肌被激活、电位由负转正的过程；体表对应 QRS 波；高频成分源于此段电活动"
+    },
+    {
+      "term": "心肌复极(Repolarization)",
+      "description": "心肌细胞激活后恢复到静息电位的过程，体表心电图上对应 ST 段和 T 波。常规心电看缺血主要盯复极（ST 段），HFQRS 盯的却是除极——这正是两者各看一面、能互补的根源。",
+      "referencePoints": "复极=细胞激活后恢复静息电位的过程；体表对应 ST 段与 T 波；ST 反映复极而 HFQRS 反映除极、二者互补"
+    },
+    {
+      "term": "心肌缺血(Myocardial Ischemia)",
+      "description": "冠脉供血跟不上心肌的需氧，心肌处于缺氧状态。缺血会一步步影响心肌的电活动，而高频成分的变化出现得很早。",
+      "referencePoints": "供血不足导致心肌缺氧；本质是供需失衡；会逐步改变心肌电活动"
+    },
+    {
+      "term": "缺血性心脏病(Ischemic Heart Disease, IHD)",
+      "description": "因冠脉狭窄或阻塞造成心肌反复或持续缺血的一类疾病，是心绞痛、心梗的统称背景。HFQRS 的临床价值就在于更早发现这类缺血。",
+      "referencePoints": "冠脉狭窄阻塞致心肌缺血的疾病；涵盖心绞痛与心梗；是 HFQRS 主要的应用对象"
+    },
+    {
+      "term": "浦肯野纤维系统(Purkinje Fiber System)",
+      "description": "心室内传导最快的一套纤维网络，让除极几乎同步铺开。它的快速传导是 QRS 中高频成分形成的传导基础。",
+      "referencePoints": "心室内传导最快的纤维网络；使除极近乎同步铺开；是高频成分的传导基础"
+    },
+    {
+      "term": "心肌激活位点(Myocardial Activation Site)",
+      "description": "除极并非一整片同时发生，而是从许多离散的起源点先后被点亮。这些位点越多越分散，叠加出的高频成分就越强。",
+      "referencePoints": "除极从离散起源点先后激活；位点是高频成分的产生源；位点减少则高频减弱"
+    },
+    {
+      "term": "除极波阵(Depolarization Wavefront)",
+      "description": "众多激活位点连成的、在心肌里推进的'激活前沿'。缺血时它变得平滑、离散源减少，高频成分随之下降——这是 HFQRS 的机制核心。",
+      "referencePoints": "激活位点连成的推进前沿；缺血使其变平滑、离散源减少；是高频衰减的机制核心"
+    },
+    {
+      "term": "高频心电图(High-Frequency ECG, HFECG)",
+      "description": "泛指对心电信号高频段的分析，范围更宽；HFQRS 是它聚焦到 QRS 段、用于缺血检测的具体应用。两者是包含关系，别混为一谈。",
+      "referencePoints": "HFECG 泛指高频段分析、范围更宽；HFQRS 特指 QRS 段；二者是包含关系而非同义"
+    },
+    {
+      "term": "ATP能量代谢(ATP Energy Metabolism)",
+      "description": "缺血说到底是能量供给失败：缺氧让 ATP 生成不足，依赖 ATP 的离子泵随之失灵，细胞维持不住正常的电位与传导。",
+      "referencePoints": "缺血致 ATP 生成不足；离子泵依赖 ATP、随之失灵；进而扰乱电位与传导"
+    },
+    {
+      "term": "钠离子传导(Sodium Ion Conduction)",
+      "description": "钠离子内流决定了 0 相去极化的速度，也决定细胞间传导的快慢。缺血削弱钠通道功能，去极化变慢，高频成分就跟着减少。",
+      "referencePoints": "钠内流决定 0 相去极化速度；也影响细胞间传导快慢；缺血削弱后高频随之减少"
+    },
+    {
+      "term": "动作电位0相(Phase 0 of Action Potential)",
+      "description": "动作电位最开始那段陡峭的上升支，由钠离子快速内流造成。它越陡峭，含的高频成分越多，是高频信号最直接的电生理根源。",
+      "referencePoints": "动作电位的快速上升支；由钠内流造成；其陡峭程度直接决定高频含量"
+    },
+    {
+      "term": "跨壁传导(Transmural Conduction)",
+      "description": "激活从心内膜向心外膜穿过心室壁的传导过程。缺血常从心内膜下开始，影响这条路径的均一性，进而改变高频表现。",
+      "referencePoints": "激活由心内膜向心外膜穿壁传导；缺血常起于心内膜下；影响其均一性即改变高频"
+    },
+    {
+      "term": "传导速度(Conduction Velocity)",
+      "description": "电活动在心肌里传播的快慢。缺血让细胞间传导减慢，除极不再陡利落，这正是高频成分衰减的直接原因。",
+      "referencePoints": "电活动在心肌中传播的快慢；缺血使其减慢；是高频衰减的直接原因"
+    },
+    {
+      "term": "高频成分衰减(High-frequency Attenuation)",
+      "description": "缺血在电学上的核心表现：QRS 里 150–250Hz 的高频振幅下降。它出现得早，是 HFQRS 用来抓缺血的关键信号。",
+      "referencePoints": "缺血时高频振幅下降；是缺血的核心电学表现；出现早、是 HFQRS 的关键信号"
+    },
+    {
+      "term": "心电信号碎裂(Fragmented QRS)",
+      "description": "传导不均一时，除极前沿不再平整，QRS 上出现额外的小切迹或顿挫，看起来'碎'了。它和高频成分变化都源自传导异常。",
+      "referencePoints": "QRS 出现额外切迹、顿挫；源于传导不均一；与高频变化同根、都反映传导异常"
+    },
+    {
+      "term": "QRS复合体(QRS Complex)",
+      "description": "心室除极在心电图上形成的那一组尖锐波形，是整张心电图振幅最大、变化最快的部分。高频成分就提取自这一段。",
+      "referencePoints": "心室除极对应的波形组；是心电图变化最快的部分；高频成分提取自此段"
+    },
+    {
+      "term": "缺血级联(Ischemic Cascade)",
+      "description": "缺血发生后按固定顺序展开：灌注不足→代谢异常→电学改变(含高频衰减)→ST 段变化→胸痛症状。高频电学改变排在很靠前，所以 HFQRS 能更早发现缺血。",
+      "referencePoints": "顺序为灌注→代谢→电学→ST段→症状；高频电学改变处于靠前环节；故 HFQRS 比 ST 段、症状更早发现缺血"
+    }
+  ]
+}

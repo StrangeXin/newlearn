@@ -326,6 +326,7 @@ async function main() {
   const SUBJECT_DEFS = [
     { dir: "popular", title: "人工智能（普及版）", weeksAgo: 2 },
     { dir: "pro", title: "人工智能（专业版）", weeksAgo: 2 },
+    { dir: "hfqrs", title: "高频心电图（HFQRS）", weeksAgo: 2 },
   ] as const;
 
   const built: { subject: { id: string; title: string; startDate: Date | null }; total: number }[] = [];

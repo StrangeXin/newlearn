@@ -1,0 +1,107 @@
+{
+  "index": 2,
+  "title": "信号采集与处理·把微伏级高频从噪声里捞出来",
+  "theme": "HFQRS 信号只有微伏级、淹没在噪声里。这一章讲清楚怎么采、怎么对齐、怎么滤波、怎么算出一条能看的振幅曲线——把'看不见的信号'变成'能判读的图'。",
+  "keywords": [
+    {
+      "term": "150–250Hz高频频带(High-frequency Band 150–250 Hz)",
+      "description": "HFQRS 分析专挑 QRS 波里 150–250Hz 这段成分。常规心电只看 0.05–100Hz、把它当噪声滤掉了，可缺血恰恰让这段高频先衰减，所以它是整套技术的目标频带。",
+      "referencePoints": "HFQRS 的目标频带是 150–250Hz；常规心电只取 0.05–100Hz 故对此不敏感；缺血先让该频带振幅下降，是它能早发现缺血的根源"
+    },
+    {
+      "term": "信号平均(Signal Averaging)",
+      "description": "把同一导联的几十上百个心搏逐拍对齐后叠加取平均。随机噪声彼此抵消、稳定的高频信号被保留下来，硬把微伏级成分从噪声里捞出来。",
+      "referencePoints": "对多个心搏对齐后叠加取平均；随机噪声抵消而真实信号保留；目的是提取常规手段看不见的 μV 级高频"
+    },
+    {
+      "term": "带通数字滤波器(Band-pass Digital Filter)",
+      "description": "用数字滤波只放行 150–250Hz、挡掉这之外的低频和更高频。它把 QRS 里真正要分析的那段高频单独取出来，是处理链上锁定目标频带的一步。",
+      "referencePoints": "通带设在 150–250Hz；既滤掉低频也滤掉更高频成分；作用是从 QRS 中分离出目标高频频带"
+    },
+    {
+      "term": "QRS对齐(QRS Alignment)",
+      "description": "信号平均前必须先把每一拍的 QRS 对齐到同一时间基准，常以 R 峰或相关峰为参照。对不齐就等于把不同时刻的波相加，高频会被自己抹平、信号反而丢失。",
+      "referencePoints": "平均前需逐拍对齐 QRS 到同一基准；常以 R 峰/相关为参照；对齐不准会模糊高频导致信号损失"
+    },
+    {
+      "term": "时域包络线(Time-domain Envelope)",
+      "description": "对滤波后的高频信号逐段算 RMS，把每个 QRS 浓缩成一条随时间起伏的振幅曲线。这条包络就是判读对象，缺血时它上面会出现凹陷。",
+      "referencePoints": "由 RMS 随时间连成的振幅曲线；把 QRS 高频浓缩成可看的形态；是后续判读和找凹陷的直接对象"
+    },
+    {
+      "term": "信噪比(Signal-to-Noise Ratio, SNR)",
+      "description": "高频信号只有微伏级，原始记录里几乎被噪声盖住。信号平均的目的就是把信噪比提到约 1μV 量级，到这个水平才看得清包络、做得了判读。",
+      "referencePoints": "高频成分是 μV 级、原始 SNR 极低；信号平均把噪声压到约 1μV 量级；SNR 不够则包络不可信"
+    },
+    {
+      "term": "均方根值(Root Mean Square, RMS)",
+      "description": "把一段高频波形平方、取平均、再开方，得到一个代表这段能量的振幅数。HFQRS 就是逐段算 RMS，把波形换成能量值串成包络。",
+      "referencePoints": "RMS=平方求均值再开方；用来量化一段高频波的能量大小；逐段算 RMS 连成时域包络"
+    },
+    {
+      "term": "振幅下降区(Reduced Amplitude Zone, RAZ)",
+      "description": "RMS 包络上出现的局部凹陷，即相邻波峰之间的低谷。它建立在均方根包络之上，是 HFQRS 最核心的形态学缺血标志——缺血让高频能量塌下去就成了它。",
+      "referencePoints": "指包络上相邻极值间的局部凹陷/低谷；依附于 RMS 包络线；是 HFQRS 核心的形态学缺血标志"
+    },
+    {
+      "term": "信号平均心电图(Signal-Averaged ECG, SAECG)",
+      "description": "更早确立的母技术：同样靠信号平均提取微弱成分，既能做高频分析也能测心室晚电位。HFQRS 可看作 SAECG 思路用在高频段、专做缺血检测的分支。",
+      "referencePoints": "SAECG 是更早的信号平均母技术；既能高频分析也能测心室晚电位（晚电位见第5章）；HFQRS 是其高频/缺血应用"
+    },
+    {
+      "term": "信号降噪(Signal Noise Reduction)",
+      "description": "采集时主要有三类噪声：工频干扰（50/60Hz 电源）、肌电（肌肉活动）、基线漂移（呼吸等低频）。降噪就是把这三类分别压下去，给后续高频提取让路。",
+      "referencePoints": "主要噪声分工频、肌电、基线漂移三类；各类来源不同需分别处理；降噪是提取 μV 级高频的前提"
+    },
+    {
+      "term": "QRS起止点检测(QRS Onset/Offset Detection)",
+      "description": "先定出每拍 QRS 从哪起、到哪止，才能圈出要分析的那段窗口。窗口划错，平均和 RMS 都会算到不该算的成分上，包络就不准。",
+      "referencePoints": "界定每拍 QRS 的起点与终点；据此圈定分析窗口；窗口不准会污染平均与 RMS 结果"
+    },
+    {
+      "term": "12导联同步采集(12-lead Synchronous Acquisition)",
+      "description": "12 个导联同一时刻一起采。同步是为了后面按导联分区判读——哪几个导联出现振幅下降，能对应到具体的心肌区域和冠脉分布。",
+      "referencePoints": "12 导联在同一时刻同步采集；同步是分区判读的前提；不同导联异常对应不同心肌区域/冠脉"
+    },
+    {
+      "term": "连续小波变换(Continuous Wavelet Transform, CWT)",
+      "description": "一种时频分析方法，能同时看出高频成分'在 QRS 哪个时刻、有多强'。比单纯算一个 RMS 数值更细，可用来刻画高频能量在波形内的分布。",
+      "referencePoints": "CWT 是一种时频分析方法；能同时给出频率与发生时刻信息；比单一 RMS 更细地刻画高频能量分布"
+    },
+    {
+      "term": "异常心搏剔除(Ectopic/Abnormal Beat Rejection)",
+      "description": "信号平均要求每拍形态一致。室早、噪声搏这类异常心搏形态不同，若混进去平均会被带偏，所以平均前要按相似度把它们筛掉。",
+      "referencePoints": "信号平均要求各拍形态一致；室早/噪声搏等异常拍会带偏平均结果；平均前按相似度剔除这些拍"
+    },
+    {
+      "term": "运动噪声校正(Motion Artifact Correction)",
+      "description": "运动负荷时身体晃动带来大量肌电和电极位移干扰，正好落在高频段最难处理。运动 HFQRS 必须专门校正这类噪声，否则伪影会被误当成信号变化。",
+      "referencePoints": "运动负荷引入肌电与电极位移干扰；这类噪声集中在高频段最棘手；不校正会把伪影误判为信号变化"
+    },
+    {
+      "term": "基线漂移校正(Baseline Drift Correction)",
+      "description": "呼吸等会让整条心电曲线上下缓慢游走，属低频漂移。先把基线拉平，QRS 起止判定和后续平均才有稳定的参照，不被慢漂移干扰。",
+      "referencePoints": "基线漂移多由呼吸等低频因素引起；表现为曲线整体缓慢上下游走；校正后才能稳定地定 QRS 起止与平均"
+    },
+    {
+      "term": "高频形态指数(High-Frequency Morphology Index, HFMI)",
+      "description": "把包络的形态用一个数值量化的指标，比如凹陷的深浅、形状是否完整。它让'包络好不好看'变成可比较、可设阈值的客观量。",
+      "referencePoints": "用数值量化包络的形态特征；可反映凹陷深浅、形态完整度；目的是把形态判读变成可比较的客观量"
+    },
+    {
+      "term": "QRS斜率分析(QRS Slope Analysis)",
+      "description": "除了高频振幅，QRS 本身的上升/下降斜率也随缺血变缓。它从波形陡峭程度这个角度反映传导变化，可与高频包络互补判读缺血。",
+      "referencePoints": "分析 QRS 上升/下降的斜率；斜率变缓也反映缺血所致传导改变；可与高频包络互补使用"
+    },
+    {
+      "term": "信号重构(Signal Reconstruction)",
+      "description": "滤波会改变波形的相位和形态，重构是从滤波结果还原出一段可供分析的干净波形，让后续算 RMS、找凹陷都基于一条可靠的曲线。",
+      "referencePoints": "从滤波结果重建可分析的波形；补偿滤波带来的相位/形态改变；为后续 RMS 与形态判读提供可靠曲线"
+    },
+    {
+      "term": "实时处理(Real-time Processing)",
+      "description": "运动负荷里缺血是动态发生的，得边采边算，实时更新包络，才能在过程中盯住高频振幅何时开始下降，而不是事后才看出来。",
+      "referencePoints": "运动负荷中缺血动态发生需边采边算；实时更新包络以捕捉振幅何时下降；对运动 HFQRS 尤为关键"
+    }
+  ]
+}
