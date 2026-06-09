@@ -32,7 +32,7 @@ export default async function LoginPage() {
           </Link>
           <h1 className="mt-5 text-2xl font-bold text-ink">登录，继续闯关</h1>
           <p className="mt-2.5 text-sm leading-relaxed text-muted">
-            用名单里的姓名 + 默认密码登录。首次登录会要求改密，账号就激活了。
+            用下面的演示账号一键体验，或用名单里的姓名 + 默认密码登录。
           </p>
         </div>
 

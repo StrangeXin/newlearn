@@ -1,20 +1,37 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { loginAction, type ActionState } from "@/app/actions/auth";
 
 const initial: ActionState = {};
 
+const DEMO_PASSWORD = "Aa123456!";
+const DEMO_ACCOUNTS = [
+  { role: "员工", name: "张三" },
+  { role: "管理员", name: "管理员小赵" },
+  { role: "超管", name: "超级管理员" },
+];
+
 export function LoginForm() {
   const [state, action, pending] = useActionState(loginAction, initial);
+  const formRef = useRef<HTMLFormElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  function loginAs(name: string) {
+    if (nameRef.current) nameRef.current.value = name;
+    if (passwordRef.current) passwordRef.current.value = DEMO_PASSWORD;
+    formRef.current?.requestSubmit();
+  }
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={formRef} action={action} className="space-y-4">
       <div>
         <label htmlFor="name" className="field-label">
           姓名
         </label>
         <input
+          ref={nameRef}
           id="name"
           name="name"
           type="text"
@@ -30,17 +47,17 @@ export function LoginForm() {
           密码
         </label>
         <input
+          ref={passwordRef}
           id="password"
           name="password"
           type="password"
           autoComplete="current-password"
           required
-          placeholder="首次登录填默认密码"
+          placeholder="默认密码"
           className="input"
         />
         <p className="field-hint mt-1.5">
-          默认密码 <span className="badge badge-muted font-mono">Aa123456!</span>{" "}
-          （首登后须改密）
+          默认密码 <span className="badge badge-muted font-mono">Aa123456!</span>
         </p>
       </div>
 
@@ -53,6 +70,26 @@ export function LoginForm() {
       <button type="submit" disabled={pending} className="btn btn-primary btn-block">
         {pending ? "登录中…" : "登录并开始闯关"}
       </button>
+
+      <div className="border-t border-line pt-4">
+        <p className="field-label mb-2.5">演示账号 · 点一下直接登录</p>
+        <div className="flex flex-wrap gap-2">
+          {DEMO_ACCOUNTS.map((a) => (
+            <button
+              key={a.name}
+              type="button"
+              disabled={pending}
+              onClick={() => loginAs(a.name)}
+              className="btn btn-secondary btn-sm"
+            >
+              {a.role}（{a.name}）
+            </button>
+          ))}
+        </div>
+        <p className="field-hint mt-2.5">
+          还有员工 李四、王五、赵六 … 吴十，密码统一 Aa123456!，可在上面手动填写登录。
+        </p>
+      </div>
     </form>
   );
 }
