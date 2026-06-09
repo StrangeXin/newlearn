@@ -2,6 +2,11 @@
 
 游戏化的内部员工学习平台（多学科可扩展）。详见 [`PRD.md`](./PRD.md)（产品共识）、[`TASKS.md`](./TASKS.md)（任务拆解）、[`CLAUDE.md`](./CLAUDE.md)（开发指引）。
 
+在线体验：https://newlearn.vercel.app （登录页有演示账号可一键登录）。
+
+> **商业授权 / 付费部署 / 定制开发**：本项目以 Apache-2.0 开源，欢迎学习与二次开发；如需商业授权、托管部署或按需定制，欢迎联系：
+> 邮箱 hexin@rxyai.com · 电话 +86 152 1113 5683
+
 ## 技术栈
 
 - Next.js 16（App Router, TypeScript）+ Tailwind CSS 4

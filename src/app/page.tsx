@@ -469,7 +469,7 @@ export default function Home() {
           <div className="mx-auto max-w-6xl px-5 py-16 text-center lg:py-20">
             <h2 className="text-2xl font-bold text-white sm:text-3xl">第 1 关已解锁</h2>
             <p className="mx-auto mt-3 max-w-md leading-relaxed text-brand-100">
-              用姓名和默认密码登录，首登改个密码就能开闯。
+              用姓名和默认密码登录，即可开始闯关。
             </p>
             <div className="mt-8 flex justify-center">
               <Link
@@ -483,20 +483,36 @@ export default function Home() {
         </section>
 
         <footer className="border-t border-line">
-          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-10 sm:flex-row">
-            <Link href="/" className="flex items-center gap-2 font-extrabold text-ink">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-600 text-xs text-white">
-                智
-              </span>
-              智学闯关
-            </Link>
-            <p className="text-sm text-muted">内部学习平台 · 麦肯锡 100 关键词方法论</p>
-            <Link
-              href="/login"
-              className="text-sm font-medium text-brand-700 transition hover:text-brand-600"
-            >
-              登录 →
-            </Link>
+          <div className="mx-auto max-w-6xl px-5 py-10">
+            <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+              <Link href="/" className="flex items-center gap-2 font-extrabold text-ink">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-600 text-xs text-white">
+                  智
+                </span>
+                智学闯关
+              </Link>
+              <p className="text-sm text-muted">内部学习平台 · 麦肯锡 100 关键词方法论</p>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-brand-700 transition hover:text-brand-600"
+              >
+                登录 →
+              </Link>
+            </div>
+            <div className="mt-6 border-t border-line pt-6 text-center text-sm leading-relaxed text-muted">
+              <p>商业授权 / 付费部署 / 定制开发，欢迎联系：</p>
+              <p className="mt-1.5 font-medium text-ink">
+                <a href="mailto:hexin@rxyai.com" className="transition hover:text-brand-700">
+                  hexin@rxyai.com
+                </a>
+                <span className="mx-2 text-line" aria-hidden>
+                  ·
+                </span>
+                <a href="tel:+8615211135683" className="transition hover:text-brand-700">
+                  +86 152 1113 5683
+                </a>
+              </p>
+            </div>
           </div>
         </footer>
       </main>
