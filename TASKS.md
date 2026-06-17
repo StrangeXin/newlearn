@@ -34,7 +34,7 @@
 
 ## S2 · 登录与激活（竖切片） ✅
 **目标**：从登录到落地仪表盘的完整身份闭环。
-- [x] 登录页（姓名 + 密码），白名单校验（loginName 归一），名单外姓名拒绝
+- [x] 登录页（姓名/手机号 + 密码），白名单校验（loginName/phone 归一），名单外账号拒绝；手机号字段为后续开放注册预留
 - [x] 首登强制改密流程（`mustChangePassword`，登录即激活 isActivated）
 - [x] 基于 `role` 的路由：员工 → `/learn`，管理员/超管 → `/admin`（含越权弹回）
 - [x] 会话管理：jose 签发 httpOnly JWT cookie，受保护路由守卫，登出

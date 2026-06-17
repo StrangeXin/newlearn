@@ -9,7 +9,7 @@ export default async function AdminUsersPage() {
 
   const users = await prisma.user.findMany({
     orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-    select: { id: true, name: true, role: true, isActivated: true },
+    select: { id: true, name: true, phone: true, role: true, isActivated: true },
   });
 
   const activated = users.filter((u) => u.isActivated).length;
@@ -25,7 +25,7 @@ export default async function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-ink">员工名单</h1>
           <p className="mt-1 text-sm text-muted">
-            预导入名单，员工用「姓名 + 默认密码 Aa123456!」首次登录并改密即激活。
+            预导入名单，员工用「姓名或手机号 + 默认密码 Aa123456!」首次登录并改密即激活。
           </p>
         </div>
         <dl className="flex shrink-0 items-center gap-5 text-sm">
@@ -51,14 +51,14 @@ export default async function AdminUsersPage() {
       <section className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="card p-5">
           <h2 className="text-sm font-bold text-ink">添加单人</h2>
-          <p className="mt-0.5 text-xs text-muted">逐个录入，可直接指定为管理员。</p>
+          <p className="mt-0.5 text-xs text-muted">逐个录入，可选填手机号并直接指定为管理员。</p>
           <div className="mt-4">
             <AddUserForm />
           </div>
         </div>
         <div className="card p-5">
           <h2 className="text-sm font-bold text-ink">批量导入</h2>
-          <p className="mt-0.5 text-xs text-muted">粘贴一整列姓名，重名自动跳过，全部按员工身份创建。</p>
+          <p className="mt-0.5 text-xs text-muted">粘贴姓名列表；也可用「姓名,手机号」两列导入。</p>
           <div className="mt-4">
             <ImportUsersForm />
           </div>
@@ -90,6 +90,7 @@ export default async function AdminUsersPage() {
               >
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="truncate font-medium text-ink">{u.name}</span>
+                  {u.phone && <span className="text-xs tabular-nums text-muted">{u.phone}</span>}
                   {u.role !== "EMPLOYEE" ? (
                     <span className="badge badge-brand">{roleLabel(u.role)}</span>
                   ) : (

@@ -36,6 +36,19 @@ export function AddUserForm() {
             className="input"
           />
         </div>
+        <div className="flex-1">
+          <label htmlFor="add-user-phone" className="field-label">
+            手机号
+          </label>
+          <input
+            id="add-user-phone"
+            name="phone"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="可选，用于登录"
+            className="input"
+          />
+        </div>
         <div className="sm:w-28">
           <label htmlFor="add-user-role" className="field-label">
             角色
@@ -61,7 +74,7 @@ export function AddUserForm() {
       ) : state?.ok ? (
         <p className="text-sm font-medium text-success-600">✓ 已添加，默认密码 Aa123456!</p>
       ) : (
-        <p className="field-hint">姓名须唯一；初始密码 Aa123456!。</p>
+        <p className="field-hint">姓名须唯一；手机号填了也须唯一；初始密码 Aa123456!。</p>
       )}
     </form>
   );
@@ -79,11 +92,11 @@ export function ImportUsersForm() {
           id="import-names"
           name="names"
           rows={4}
-          placeholder={"每行一个姓名，例如：\n张伟\n李娜\n王芳"}
+          placeholder={"每行一个姓名，或姓名,手机号，例如：\n张伟\n李娜,13800138000\n王芳"}
           className="textarea min-h-28 font-mono"
         />
         <p className="field-hint mt-1.5">
-          换行或逗号都行；重名自动跳过，全部按员工身份创建。
+          纯姓名支持换行或逗号分隔；带手机号时建议每行一人，全部按员工身份创建。
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

@@ -15,11 +15,11 @@ const DEMO_ACCOUNTS = [
 export function LoginForm() {
   const [state, action, pending] = useActionState(loginAction, initial);
   const formRef = useRef<HTMLFormElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   function loginAs(name: string) {
-    if (nameRef.current) nameRef.current.value = name;
+    if (identifierRef.current) identifierRef.current.value = name;
     if (passwordRef.current) passwordRef.current.value = DEMO_PASSWORD;
     formRef.current?.requestSubmit();
   }
@@ -27,17 +27,17 @@ export function LoginForm() {
   return (
     <form ref={formRef} action={action} className="space-y-4">
       <div>
-        <label htmlFor="name" className="field-label">
-          姓名
+        <label htmlFor="identifier" className="field-label">
+          姓名 / 手机号
         </label>
         <input
-          ref={nameRef}
-          id="name"
-          name="name"
+          ref={identifierRef}
+          id="identifier"
+          name="identifier"
           type="text"
           autoComplete="username"
           required
-          placeholder="与名单一致的姓名"
+          placeholder="与名单一致的姓名，或已登记手机号"
           className="input"
         />
       </div>
@@ -87,7 +87,7 @@ export function LoginForm() {
           ))}
         </div>
         <p className="field-hint mt-2.5">
-          还有员工 李四、王五、赵六 … 吴十，密码统一 Aa123456!，可在上面手动填写登录。
+          还有员工 李四、王五、赵六 … 吴十，密码统一 Aa123456!，可用姓名或已登记手机号登录。
         </p>
       </div>
     </form>

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { findUserByLoginIdentifier } from "@/lib/auth/identifier";
 import { hashPassword, passwordSchema, verifyPassword } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { getCurrentUser, homePathForRole, passwordChangeRequired } from "@/lib/auth/user";
@@ -15,16 +16,15 @@ export async function loginAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const name = String(formData.get("name") ?? "").trim();
+  const identifier = String(formData.get("identifier") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!name || !password) return { error: "请输入姓名和密码" };
+  if (!identifier || !password) return { error: "请输入姓名/手机号和密码" };
 
-  const loginName = name.toLowerCase();
-  const user = await prisma.user.findUnique({ where: { loginName } });
-  if (!user) return { error: "该姓名不在员工名单中，请联系管理员" };
+  const user = await findUserByLoginIdentifier(identifier);
+  if (!user) return { error: "账号不存在或密码不正确" };
 
   const ok = await verifyPassword(password, user.passwordHash);
-  if (!ok) return { error: "密码不正确" };
+  if (!ok) return { error: "账号不存在或密码不正确" };
 
   if (!user.isActivated) {
     await prisma.user.update({

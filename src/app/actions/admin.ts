@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { normalizeLoginName, normalizeOptionalPhone } from "@/lib/auth/identifier";
 import { requireAdmin, requireSuperadmin } from "@/lib/auth/user";
 import { hashPassword } from "@/lib/auth/password";
+import { Prisma } from "@/generated/prisma/client";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,15 +48,27 @@ export async function addUserAction(
 ): Promise<AdminState> {
   await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
+  const phoneRaw = String(formData.get("phone") ?? "");
   const role = String(formData.get("role") ?? "EMPLOYEE");
   if (!name) return { error: "请填写姓名" };
-  const loginName = name.toLowerCase();
+  const loginName = normalizeLoginName(name);
+  let phone: string | null = null;
+  try {
+    phone = normalizeOptionalPhone(phoneRaw);
+  } catch {
+    return { error: "手机号格式不正确" };
+  }
   const exists = await prisma.user.findUnique({ where: { loginName } });
   if (exists) return { error: "该姓名已存在" };
+  if (phone) {
+    const phoneExists = await prisma.user.findUnique({ where: { phone } });
+    if (phoneExists) return { error: "该手机号已存在" };
+  }
   await prisma.user.create({
     data: {
       loginName,
       name,
+      phone,
       role: role === "ADMIN" ? "ADMIN" : "EMPLOYEE",
       passwordHash: await hashPassword(defaultPassword()),
       mustChangePassword: true,
@@ -72,17 +86,52 @@ export async function importUsersAction(
 ): Promise<AdminState> {
   await requireAdmin();
   const text = String(formData.get("names") ?? "");
-  const names = [...new Set(text.split(/[\n,，]/).map((s) => s.trim()).filter(Boolean))];
-  if (names.length === 0) return { error: "请粘贴姓名（每行一个）" };
+  const rows = text
+    .split(/\n/)
+    .flatMap((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return [];
+      const cells = trimmed.split(/[,，\t]/).map((cell) => cell.trim()).filter(Boolean);
+      if (cells.length === 2 && /^1[3-9]\d{9}$/.test(cells[1].replace(/[\s-]/g, ""))) {
+        return [{ name: cells[0], phoneRaw: cells[1] }];
+      }
+      return cells.map((name) => ({ name, phoneRaw: "" }));
+    })
+    .filter((row) => row.name);
+  if (rows.length === 0) return { error: "请粘贴姓名（每行一个，可选：姓名,手机号）" };
   const hash = await hashPassword(defaultPassword());
   let added = 0;
-  for (const name of names) {
-    const loginName = name.toLowerCase();
+  for (const row of rows) {
+    const loginName = normalizeLoginName(row.name);
+    let phone: string | null = null;
+    try {
+      phone = normalizeOptionalPhone(row.phoneRaw);
+    } catch {
+      return { error: `「${row.name}」的手机号格式不正确` };
+    }
     const exists = await prisma.user.findUnique({ where: { loginName } });
     if (exists) continue;
-    await prisma.user.create({
-      data: { loginName, name, role: "EMPLOYEE", passwordHash: hash, mustChangePassword: true, isActivated: false },
-    });
+    try {
+      await prisma.user.create({
+        data: {
+          loginName,
+          name: row.name,
+          phone,
+          role: "EMPLOYEE",
+          passwordHash: hash,
+          mustChangePassword: true,
+          isActivated: false,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        continue;
+      }
+      throw error;
+    }
     added += 1;
   }
   revalidatePath("/admin/users");

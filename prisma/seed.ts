@@ -268,18 +268,18 @@ async function seedChapterCompletion(
   console.log(`   🏁 「${loginName}」完成第${chapterIndex}章全部（均分 ${avg}）`);
 }
 
-const DEMO_USERS: { name: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] =
+const DEMO_USERS: { name: string; phone: string; role: "EMPLOYEE" | "ADMIN" | "SUPERADMIN" }[] =
   [
-    { name: "超级管理员", role: "SUPERADMIN" },
-    { name: "管理员小赵", role: "ADMIN" },
-    { name: "张三", role: "EMPLOYEE" },
-    { name: "李四", role: "EMPLOYEE" },
-    { name: "王五", role: "EMPLOYEE" },
-    { name: "赵六", role: "EMPLOYEE" },
-    { name: "钱七", role: "EMPLOYEE" },
-    { name: "孙八", role: "EMPLOYEE" },
-    { name: "周九", role: "EMPLOYEE" },
-    { name: "吴十", role: "EMPLOYEE" },
+    { name: "超级管理员", phone: "13900000001", role: "SUPERADMIN" },
+    { name: "管理员小赵", phone: "13900000002", role: "ADMIN" },
+    { name: "张三", phone: "13900000003", role: "EMPLOYEE" },
+    { name: "李四", phone: "13900000004", role: "EMPLOYEE" },
+    { name: "王五", phone: "13900000005", role: "EMPLOYEE" },
+    { name: "赵六", phone: "13900000006", role: "EMPLOYEE" },
+    { name: "钱七", phone: "13900000007", role: "EMPLOYEE" },
+    { name: "孙八", phone: "13900000008", role: "EMPLOYEE" },
+    { name: "周九", phone: "13900000009", role: "EMPLOYEE" },
+    { name: "吴十", phone: "13900000010", role: "EMPLOYEE" },
   ];
 
 async function clearAll() {
@@ -312,6 +312,7 @@ async function main() {
       data: {
         loginName: u.name.trim().toLowerCase(),
         name: u.name,
+        phone: u.phone,
         passwordHash,
         role: u.role,
         mustChangePassword: true,

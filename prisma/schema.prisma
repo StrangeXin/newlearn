@@ -70,6 +70,8 @@ model User {
   loginName          String    @unique
   /// 展示用姓名（保留原始大小写/空格），用于排行榜公开展示，不用于登录唯一性判定。
   name               String
+  /// 可选手机号，规范化后全局唯一；员工可用「姓名或手机号 + 密码」登录。
+  phone              String?   @unique
   passwordHash       String
   /// 首登强制改密标志，激活后改密置 false
   mustChangePassword Boolean   @default(true)
