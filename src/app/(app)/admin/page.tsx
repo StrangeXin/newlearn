@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/user";
 import { getScheduleInfo, isCycleEnded } from "@/lib/schedule";
-import { ACTIVE_SUBJECT_WHERE, SUBJECT_ORDER } from "@/lib/subject";
+import { ACTIVE_SUBJECT_WHERE, SUBJECT_MANAGEMENT_ORDER } from "@/lib/subject";
 import { ScheduleControls } from "./schedule-controls";
 
 function StatCard({
@@ -80,7 +80,7 @@ export default async function AdminPage() {
       prisma.redemption.count({ where: { status: "PENDING" } }),
       prisma.subject.findMany({
         where: ACTIVE_SUBJECT_WHERE,
-        orderBy: SUBJECT_ORDER,
+        orderBy: SUBJECT_MANAGEMENT_ORDER,
         include: { _count: { select: { chapters: true } } },
       }),
     ]);

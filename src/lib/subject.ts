@@ -24,6 +24,12 @@ export const SUBJECT_ORDER: Prisma.SubjectOrderByWithRelationInput[] = [
   { createdAt: "asc" },
 ];
 
+/** 管理后台学科排序：不受开始日调整影响，避免周切换按钮点击后卡片跳位。 */
+export const SUBJECT_MANAGEMENT_ORDER: Prisma.SubjectOrderByWithRelationInput[] = [
+  { createdAt: "asc" },
+  { id: "asc" },
+];
+
 /** 员工可见的学科展示排序：入门/普及在前，专业/进阶在后，其余保持原有稳定顺序。 */
 export function sortSubjectsForLearners<T extends { title: string }>(subjects: T[]) {
   const rank = (title: string) =>
