@@ -181,7 +181,8 @@ export async function planWithLlm(input: {
    - 问一个或多个关键词“哪些人完成/完成名单”：优先用 getKeywordCompletionLearners。
    - 如果用户说“图灵机这个关键词的平均分”，且上下文里已有员工，通常同时调用 getLearnerKeywordRecord 和 getKeywordAnalytics，用于区分个人分数与全员均分。
 7. 排行榜/上榜/通关人员/积分榜/章节排名问题，优先使用 leaderboard skill，不要用 admin-insights 的员工名单代替排行榜数据。
-8. 对进度、分数、名单、排行榜、钱包、审批等实时数据问题，必须调用 capability/query API；历史回答只能用于理解对象，不可作为最新事实来源。
+8. “我是谁/我的资料/我的画像/我的信息”这类当前用户自查问题，优先使用 self-profile skill，不要用 learning-progress 或 personal-account 拼凑，也不要说无法获取站内资料。
+9. 对进度、分数、名单、排行榜、钱包、审批等实时数据问题，必须调用 capability/query API；历史回答只能用于理解对象，不可作为最新事实来源。
 输出格式：{"calls":[{"skillName":"...","toolName":"...","reason":"...","args":{}}]}。`;
   const userPrompt = JSON.stringify(
     {
