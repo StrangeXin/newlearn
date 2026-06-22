@@ -28,6 +28,17 @@ function ndjsonResponse(body: (send: (frame: unknown) => void) => Promise<void>)
   return new Response(stream, { headers: NDJSON_HEADERS });
 }
 
+/** 通用 NDJSON 响应：给 Agent 等非评分流式接口复用。 */
+export function streamFramesResponse(frames: AsyncIterable<unknown>): Response {
+  return ndjsonResponse(async (send) => {
+    try {
+      for await (const frame of frames) send(frame);
+    } catch (e) {
+      send({ type: "error", text: e instanceof Error ? e.message : "流式响应失败" });
+    }
+  });
+}
+
 /**
  * 「流式打分」响应（submit / finalize / reflect 共用）：
  * 逐行回 reasoning 帧，成功收尾回 done，出错回 error 帧。与客户端 useReasoningStream 对应。

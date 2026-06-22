@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
+import { AssistantWidget } from "@/components/assistant-widget";
 import { passwordChangeRequired, requireUser } from "@/lib/auth/user";
 
 export default async function AppLayout({
@@ -15,6 +16,7 @@ export default async function AppLayout({
     <div className="flex min-h-full flex-1 flex-col">
       <AppHeader user={user} />
       <div className="flex-1">{children}</div>
+      <AssistantWidget />
     </div>
   );
 }

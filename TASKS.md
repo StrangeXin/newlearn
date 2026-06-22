@@ -248,23 +248,23 @@ updateMemory(结构化标签+markdown画像，兴趣项自动贴合岗位)；JSO
 
 ## S16 · AI 助手与 Agent 能力层（v1.4）⏳（PRD §16）
 **目标**：在系统右下角增加「智学助手」入口，做成标准 Agent 流程与可扩展 Skill 能力层，而不是一次性硬编码聊天框。
-- [ ] 数据模型：`AssistantConversation` / `AssistantMessage` / `AssistantRun` / `AssistantToolCall`（或等价模型），支持最近会话恢复、Agent 执行审计、工具调用摘要；普通对话不写入 `EmployeeMemory`
-- [ ] Agent 核心：`AssistantSkill` / `AssistantTool` 契约、Tool Registry、Skill Loader、参数 schema 校验、权限声明与执行层鉴权兜底
-- [ ] Agent 编排：`context assembly → skill selection → tool planning → tool execution → streamed synthesis → optional confirmation action`
-- [ ] 流式路由：`/api/assistant/chat`（Node runtime），复用 NDJSON/SSE 风格事件；支持文本增量、工具状态、工具结果摘要、确认卡片、导航动作、错误
-- [ ] 全局 UI：`AssistantWidget` 挂在 `(app)/layout`；右下角入口 + 桌面右侧抽屉 + 移动端底部近全屏面板；跨页面保留最近会话
-- [ ] 页面上下文：发送消息时带 `pathname`、`subjectId`、`chapterIndex`、`keywordId`、`submissionId` 等临时上下文；Agent 不把页面上下文写入长期画像
-- [ ] Skill：`learning-progress`（学习进度、章节解锁、待办、每日上限、反思待办）
-- [ ] Skill：`personal-account`（积分余额、待审批占用、近期流水、兑换规则）
-- [ ] Skill：`keyword-coach`（基于本人 submission 继续辅导；关键词结果页自动带上下文；不代写完整笔记）
-- [ ] Skill：`peer-summary`（仅已解锁关键词范围内摘要 top 同伴记录；复用同伴可见性规则；不全库搜索、不整段搬运）
-- [ ] Skill：`redemption`（第一版唯一写操作：自然语言生成兑换申请确认卡；用户确认后调用现有兑换服务层）
-- [ ] Skill：`admin-insights`（管理员只读：平台概览、待审批数量、学习进度大盘、章节排名、预算与积分统计）
-- [ ] 权限与安全：所有工具严格等同当前用户权限；员工无法通过助手越权看后台、低分名单、未解锁同伴笔记；写操作必须确认卡
-- [ ] 审计与隐私：模型调用进 `AiCallLog`（assistant phase）；Agent run / tool call 单独记录；管理员默认只看摘要和成本，不看员工完整私聊
-- [ ] 导航动作：Agent 返回结构化按钮，用户点击跳转 `/learn`、关键词页、反思页、`/redeem`、后台只读页等；不自动跳转
-- [ ] 自动任务预留：定义确认动作类型与未来调度接口草案，但 v1.4 不实现后台自动任务
-- [ ] 测试：Skill 选择 / 参数校验 / 权限拒绝 / 兑换确认卡 / 同伴可见性 / 流式协议 / 会话恢复；Mock provider 下可稳定跑通
+- [x] 数据模型：`AssistantConversation` / `AssistantMessage` / `AssistantRun` / `AssistantToolCall`（或等价模型），支持最近会话恢复、Agent 执行审计、工具调用摘要；普通对话不写入 `EmployeeMemory`
+- [x] Agent 核心：`AssistantSkill` / `AssistantTool` 契约、Tool Registry、Skill Loader、参数 schema 校验、权限声明与执行层鉴权兜底
+- [x] Agent 编排：`context assembly → LLM planner（读历史+Skill manifest）→ tool execution → LLM streamed synthesis → optional confirmation action`；本地 matcher 仅作 DeepSeek 不可用时的降级
+- [x] 流式路由：`/api/assistant/chat`（Node runtime），复用 NDJSON/SSE 风格事件；支持文本增量、工具状态、工具结果摘要、确认卡片、导航动作、错误
+- [x] 全局 UI：`AssistantWidget` 挂在 `(app)/layout`；右下角入口 + 桌面右侧抽屉 + 移动端底部近全屏面板；跨页面保留最近会话
+- [x] 页面上下文：发送消息时带 `pathname`、`subjectId`、`chapterIndex`、`keywordId`、`submissionId` 等临时上下文；Agent 不把页面上下文写入长期画像
+- [x] Skill：`learning-progress`（学习进度、章节解锁、待办、每日上限、反思待办）
+- [x] Skill：`personal-account`（积分余额、待审批占用、近期流水、兑换规则）
+- [x] Skill：`keyword-coach`（基于本人 submission 继续辅导；关键词结果页自动带上下文；不代写完整笔记）
+- [x] Skill：`peer-summary`（仅已解锁关键词范围内摘要 top 同伴记录；复用同伴可见性规则；不全库搜索、不整段搬运）
+- [x] Skill：`redemption`（第一版唯一写操作：自然语言生成兑换申请确认卡；用户确认后调用现有兑换服务层）
+- [x] Skill：`admin-insights`（管理员只读：平台概览、待审批数量、学习进度大盘、章节排名、预算与积分统计）
+- [x] 权限与安全：所有工具严格等同当前用户权限；员工无法通过助手越权看后台、低分名单、未解锁同伴笔记；写操作必须确认卡
+- [x] 审计与隐私：模型调用进 `AiCallLog`（assistant phase）；Agent run / tool call 单独记录；管理员默认只看摘要和成本，不看员工完整私聊
+- [x] 导航动作：Agent 返回结构化按钮，用户点击跳转 `/learn`、关键词页、反思页、`/redeem`、后台只读页等；不自动跳转
+- [x] 自动任务预留：定义确认动作类型与未来调度接口草案，但 v1.4 不实现后台自动任务
+- [x] 测试：Skill 选择 / 参数校验 / 权限拒绝 / 兑换确认卡 / 同伴可见性 / 流式协议 / 会话恢复；Mock provider 下可稳定跑通
 **验收**：登录后右下角可打开智学助手；对话流式输出；能查学习进度/积分、辅导当前关键词、摘要已解锁同伴记录、生成并确认兑换申请；管理员可查只读运营概览；越权与高风险写操作被拒绝或引导到页面；typecheck + lint + 单测通过。
 **依赖**：S14/S15 的 AI 审计、流式基础、结果页追问、同伴可见性、兑换服务层。
 

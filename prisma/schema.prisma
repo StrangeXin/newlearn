@@ -59,6 +59,27 @@ enum LedgerType {
   REDEEM // 兑换扣减（amount 为负）
 }
 
+/// AI 助手消息角色
+enum AssistantMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+/// AI 助手运行状态
+enum AssistantRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+/// AI 助手工具调用状态
+enum AssistantToolCallStatus {
+  SUCCESS
+  ERROR
+  SKIPPED
+}
+
 // ============================================================================
 // 用户 / 身份
 // ============================================================================
@@ -108,6 +129,10 @@ model User {
   chapterReflections  ChapterReflection[]
   /// 写笔记过程中的草稿（中途退出保留记录）
   noteDrafts          NoteDraft[]
+  /// 右下角 AI 助手会话
+  assistantConversations AssistantConversation[]
+  assistantMessages      AssistantMessage[]
+  assistantRuns          AssistantRun[]
 
   // 审计：导入者 / 角色变更者（自引用）
   createdBy        User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -693,4 +718,87 @@ model AiCallLog {
   @@index([keywordId])
   @@index([phase])
   @@map("ai_call_logs")
+}
+
+// ============================================================================
+// AI 助手会话与 Agent 执行日志（PRD §16）
+// ============================================================================
+
+/// 右下角「智学助手」会话。v1 体验只恢复最近会话；模型预留多会话列表。
+model AssistantConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("智学助手")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AssistantMessage[]
+  runs     AssistantRun[]
+
+  @@index([userId, updatedAt])
+  @@map("assistant_conversations")
+}
+
+/// 助手对话消息，用于刷新后恢复最近会话；不写入员工画像。
+model AssistantMessage {
+  id             String               @id @default(cuid())
+  conversationId String
+  userId         String
+  role           AssistantMessageRole
+  content        String
+  /// 导航按钮、确认卡等结构化 UI payload；普通文本消息为 null。
+  metadata       Json?
+  createdAt      DateTime             @default(now())
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([userId, createdAt])
+  @@map("assistant_messages")
+}
+
+/// 一轮用户消息触发的 Agent 执行记录：选择了哪些 Skill、结果如何。
+model AssistantRun {
+  id             String             @id @default(cuid())
+  conversationId String
+  userId         String
+  status         AssistantRunStatus @default(RUNNING)
+  userMessage    String
+  pageContext    Json?
+  selectedSkills Json              @default("[]")
+  summary        String?
+  errorText      String?
+  startedAt      DateTime          @default(now())
+  completedAt    DateTime?
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolCalls    AssistantToolCall[]
+
+  @@index([conversationId, startedAt])
+  @@index([userId, startedAt])
+  @@index([status])
+  @@map("assistant_runs")
+}
+
+/// Agent 受控工具调用日志：只记录参数/结果摘要，不把完整私聊暴露给普通管理员。
+model AssistantToolCall {
+  id           String                  @id @default(cuid())
+  runId        String
+  skillName    String
+  toolName     String
+  status       AssistantToolCallStatus
+  inputSummary Json?
+  resultSummary Json?
+  errorText    String?
+  latencyMs    Int?
+  createdAt    DateTime                @default(now())
+
+  run AssistantRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([skillName, toolName])
+  @@map("assistant_tool_calls")
 }
