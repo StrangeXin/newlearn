@@ -1,6 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { answerDirectlyWithLlm, canUseAssistantLlm, planWithLlm, synthesizeWithLlm } from "./llm";
+import { answerDirectlyWithLlm, canUseAssistantLlm, compactContextWithLlm, planWithLlm, synthesizeWithLlm } from "./llm";
 import { canUseTool } from "./permissions";
 import { getAssistantSkills, selectAssistantSkills } from "./capabilities/registry";
 import type {
@@ -16,6 +16,7 @@ import type {
 } from "./types";
 
 const MAX_MESSAGE_LEN = 2000;
+const CONTEXT_COMPACTION_THRESHOLD = 16;
 
 function toJson(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   if (value === undefined) return Prisma.JsonNull;
@@ -55,6 +56,18 @@ function mergeLearningContext(
   };
 }
 
+function hasLearningContext(ctx: AssistantLearningContext) {
+  return Boolean(ctx.learner || ctx.keyword || ctx.subject);
+}
+
+function latestLearningContext(messages: { metadata: unknown }[]): AssistantLearningContext {
+  for (const message of messages) {
+    const ctx = learningContextFromMetadata(message.metadata);
+    if (hasLearningContext(ctx)) return ctx;
+  }
+  return {};
+}
+
 async function getOrCreateConversation(userId: string, conversationId?: string) {
   if (conversationId) {
     const existing = await prisma.assistantConversation.findFirst({
@@ -62,11 +75,6 @@ async function getOrCreateConversation(userId: string, conversationId?: string) 
     });
     if (existing) return existing;
   }
-  const latest = await prisma.assistantConversation.findFirst({
-    where: { userId },
-    orderBy: { updatedAt: "desc" },
-  });
-  if (latest) return latest;
   return prisma.assistantConversation.create({ data: { userId } });
 }
 
@@ -174,19 +182,36 @@ export async function* runAssistant({
     data: { updatedAt: new Date() },
   });
 
+  const messageCount = await prisma.assistantMessage.count({
+    where: { conversationId: conversation.id },
+  });
+  const historyLimit =
+    messageCount > CONTEXT_COMPACTION_THRESHOLD ? CONTEXT_COMPACTION_THRESHOLD : messageCount;
   const recentMessages = await prisma.assistantMessage.findMany({
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "desc" },
-    take: 8,
+    take: historyLimit,
     select: { role: true, content: true, metadata: true },
   });
   const history: AssistantHistoryMessage[] = recentMessages
     .reverse()
     .map((m) => ({ role: m.role, content: m.content }));
   const assistantSkills = getAssistantSkills();
-  let learningContext = recentMessages
-    .map((m) => learningContextFromMetadata(m.metadata))
-    .find((ctx) => ctx.learner || ctx.keyword || ctx.subject) ?? {};
+  let learningContext = latestLearningContext(recentMessages);
+  if (messageCount > CONTEXT_COMPACTION_THRESHOLD && canUseAssistantLlm()) {
+    try {
+      yield { type: "status", text: "历史较长，我正在压缩对话上下文用于本轮规划。" };
+      learningContext = await compactContextWithLlm({
+        user,
+        message: text,
+        page,
+        history,
+        knownContext: learningContext,
+      });
+    } catch (e) {
+      console.error("assistant context compaction 失败，继续使用最近确认上下文：", e);
+    }
+  }
   let plannedCalls: AssistantPlannedToolCall[] = [];
   let plannerMode: "llm" | "fallback" = "fallback";
   if (canUseAssistantLlm()) {

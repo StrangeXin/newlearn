@@ -46,8 +46,14 @@ async function getLeaderboardSnapshot(input: unknown): Promise<AssistantToolResu
 
   const subjectBoard = subjectBoards.find((board) => board.subject.id === subject?.id) ?? subjectBoards[0];
   const completedPeople = [...new Set(subjectBoards.flatMap((board) => board.rows.map((row) => row.name)))];
+  const boardLines = subjectBoards
+    .map((board) => {
+      const names = board.rows.map((row) => `${row.name}（通过 ${row.completed} 个，均分 ${row.avgScore.toFixed(1)}）`);
+      return `${board.subject.title}：${names.join("、") || "暂无上榜"}`;
+    })
+    .join("；");
   const summary = subjectBoard
-    ? `当前排行榜可查到 ${completedPeople.length} 名已通过至少 1 个关键词的上榜员工。注意：这里的“通过/通关”指关键词通过，不等于完成整章或全学科。${subjectBoard.subject.title} 学习榜：${subjectBoard.rows.map((row, index) => `${index + 1}. ${row.name}（通过 ${row.completed} 个关键词，均分 ${row.avgScore.toFixed(1)}）`).join("；") || "暂无上榜"}。`
+    ? `当前全平台各学习榜去重后可查到 ${completedPeople.length} 名已通过至少 1 个关键词的上榜员工。注意：这里的“通过/通关”指关键词通过，不等于完成整章或全学科。各学科榜：${boardLines}。`
     : "当前排行榜还没有上榜数据。";
 
   return {

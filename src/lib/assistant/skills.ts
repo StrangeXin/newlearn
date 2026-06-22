@@ -1053,7 +1053,7 @@ export const assistantSkills: AssistantSkill[] = [
           additionalProperties: false,
         },
         match: (message) =>
-          hasAny(message, ["完成了哪些", "哪些题", "哪些关键词", "题目", "每题", "平均分", "均分"]) &&
+          hasAny(message, ["完成了哪些", "哪些题", "哪些关键词", "哪些数据", "有数据", "题目", "每题", "平均分", "均分"]) &&
           !hasAny(message, ["这个关键词", "该关键词"]),
         execute: async (input, ctx) => listLearnerKeywordRecords(input, ctx),
         summarizeResult: (result) => ({
