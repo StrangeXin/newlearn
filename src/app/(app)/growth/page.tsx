@@ -1,31 +1,14 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
 import { requireProfile } from "@/lib/auth/user";
-import { parseTags } from "@/lib/memory-diff";
+import { getGrowthTimeline } from "@/lib/growth";
 import { GrowthTimeline, PortraitCard } from "@/components/growth-timeline";
 
 const dateFmt = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric" });
 
-function averageScore(snapshots: { finalScore: number }[]) {
-  if (snapshots.length === 0) return 0;
-  const avg = snapshots.reduce((sum, s) => sum + s.finalScore, 0) / snapshots.length;
-  return Math.round(avg * 10) / 10;
-}
-
 export default async function GrowthPage() {
   const { user } = await requireProfile();
 
-  const [memory, snapshots] = await Promise.all([
-    prisma.employeeMemory.findUnique({ where: { userId: user.id } }),
-    prisma.employeeMemorySnapshot.findMany({
-      where: { userId: user.id },
-      orderBy: { seq: "asc" },
-    }),
-  ]);
-
-  const tags = parseTags(memory?.tags);
-  const latest = snapshots.at(-1);
-  const avgScore = averageScore(snapshots);
+  const { memory, snapshots, tags, latest, avgScore } = await getGrowthTimeline(user.id);
 
   return (
     <main className="page py-8">

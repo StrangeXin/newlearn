@@ -14,10 +14,11 @@ export interface AssistantCapabilityCoverageItem {
 export const assistantCapabilityCoverage: AssistantCapabilityCoverageItem[] = [
   { surface: "/", owner: "public landing", status: "not-exposed", reason: "Public unauthenticated marketing page is outside assistant sessions." },
   { surface: "/profile", owner: "self profile", status: "covered", providerId: "self-profile" },
-  { surface: "/growth", owner: "learning portrait timeline", status: "covered", providerId: "self-profile" },
+  { surface: "/growth", owner: "learning portrait and keyword timeline", status: "covered", providerId: "self-profile" },
   { surface: "/learn", owner: "subject progress", status: "covered", providerId: "learning-progress" },
   { surface: "/learn/[subjectId]", owner: "subject map", status: "covered", providerId: "learning-progress" },
   { surface: "/learn/[subjectId]/certificate", owner: "completion certificate", status: "covered", providerId: "learning-progress" },
+  { surface: "/learn/[subjectId]/chapter/[index]", owner: "chapter keyword list", status: "covered", providerId: "learning-progress" },
   { surface: "/learn/[subjectId]/chapter/[index]/reflect", owner: "chapter reflection", status: "not-exposed", reason: "Reflection is a user-authored memory-changing flow; assistant may navigate but not submit it." },
   { surface: "/learn/keyword/[id]", owner: "keyword coaching", status: "covered", providerId: "learning-context" },
   { surface: "/leaderboard", owner: "leaderboard", status: "covered", providerId: "leaderboard" },

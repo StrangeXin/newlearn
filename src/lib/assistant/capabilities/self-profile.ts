@@ -1,4 +1,6 @@
 import { getLearnerDetail } from "@/lib/stats";
+import { getGrowthTimeline } from "@/lib/growth";
+import { prisma } from "@/lib/db";
 import type { AssistantSkill, AssistantToolResult } from "@/lib/assistant/types";
 import type { AssistantCapabilityProvider } from "./registry";
 
@@ -88,6 +90,71 @@ async function getSelfPortrait(userId: string): Promise<AssistantToolResult> {
   };
 }
 
+async function getSelfKeywordTimeline(userId: string): Promise<AssistantToolResult> {
+  const [growth, rows] = await Promise.all([
+    getGrowthTimeline(userId),
+    prisma.keywordProgress.findMany({
+      where: { userId, isCompleted: true },
+      orderBy: [{ completedAt: "asc" }, { updatedAt: "asc" }],
+      select: {
+        keywordId: true,
+        bestFinalScore: true,
+        completedAt: true,
+        updatedAt: true,
+        keyword: {
+          select: {
+            term: true,
+            chapter: {
+              select: {
+                index: true,
+                title: true,
+                subject: { select: { id: true, title: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const records = rows.map((row) => ({
+    keywordId: row.keywordId,
+    term: row.keyword.term,
+    subjectId: row.keyword.chapter.subject.id,
+    subjectTitle: row.keyword.chapter.subject.title,
+    chapterIndex: row.keyword.chapter.index,
+    chapterTitle: row.keyword.chapter.title,
+    score: row.bestFinalScore,
+    completedAt: row.completedAt ?? row.updatedAt,
+  }));
+
+  return {
+    summary: records.length
+      ? `你已完成 ${records.length} 个关键词，最早完成于 ${records[0].completedAt.toISOString()}，最近完成于 ${records.at(-1)?.completedAt.toISOString()}；成长轨迹里有 ${growth.snapshots.length} 次画像更新记录。`
+      : "你还没有完成关键词。",
+    data: {
+      found: true,
+      count: records.length,
+      records,
+      growth: {
+        updateCount: growth.memory?.updateCount ?? 0,
+        avgScore: growth.avgScore,
+        latest: growth.latest,
+        snapshots: growth.snapshots.map((snapshot) => ({
+          seq: snapshot.seq,
+          keywordTerm: snapshot.keywordTerm,
+          finalScore: snapshot.finalScore,
+          createdAt: snapshot.createdAt,
+        })),
+      },
+    },
+    navigation: [
+      { label: "学习地图", href: "/learn" },
+      { label: "成长轨迹", href: "/growth" },
+    ],
+  };
+}
+
 export const selfProfileSkills: AssistantSkill[] = [
   {
     name: "self-profile",
@@ -117,6 +184,15 @@ export const selfProfileSkills: AssistantSkill[] = [
         parameters: { type: "object", properties: {}, additionalProperties: false },
         match: (message) => hasAny(message, ["我的画像", "学习画像", "画像是啥", "画像是什么", "强项", "待加强", "盲区"]),
         execute: async (_input, ctx) => getSelfPortrait(ctx.user.id),
+      },
+      {
+        name: "getSelfKeywordTimeline",
+        description: "查询当前登录用户已完成关键词的时间线：关键词、学科、章节、分数、完成时间。",
+        permission: "USER",
+        parameters: { type: "object", properties: {}, additionalProperties: false },
+        match: (message) =>
+          hasAny(message, ["时间节点", "完成时间", "时间线", "什么时候完成", "完成关键词的时间", "学习时间线"]),
+        execute: async (_input, ctx) => getSelfKeywordTimeline(ctx.user.id),
       },
     ],
   },
