@@ -2,6 +2,7 @@ import { recordAiCallWith } from "@/lib/ai-log";
 import { getScoringProvider } from "@/lib/scoring";
 import type {
   AssistantHistoryMessage,
+  AssistantLearningContext,
   AssistantPageContext,
   AssistantPlannedToolCall,
   AssistantSkill,
@@ -65,22 +66,34 @@ export async function planWithLlm(input: {
   message: string;
   page: AssistantPageContext;
   history: AssistantHistoryMessage[];
+  learningContext: AssistantLearningContext;
   skills: AssistantSkill[];
 }): Promise<AssistantPlannedToolCall[]> {
   const cfg = readConfig();
-  const system = `你是智学闯关平台的 Agent Planner。你必须根据用户当前问题、历史对话、页面上下文和可用 Skill，选择要调用的工具。
+  const system = `你是智学闯关平台的 Agent Planner。你必须根据用户当前问题、历史对话、页面上下文和 Capability Registry 暴露的可用能力，选择要调用的工具。
 只输出严格 JSON，不要解释。
 规则：
-1. 可以选择 0-3 个工具。
-2. 必须理解上下文追问，例如“分别是哪些人”要结合上一轮关于员工/管理员数量的问题。
+1. 可以选择 0-6 个工具，允许多步组合：先 resolve 实体，再查数据；多关键词对比时可以分别 resolve 和查询。
+2. 必须理解上下文追问，例如“分别是哪些人”要结合上一轮关于员工/管理员数量的问题；“这个关键词/他/她”要沿用历史里已解析的员工或关键词。
 3. 不要选择用户权限之外的工具；最终权限还有代码兜底。
 4. 写操作只允许生成确认草案，不直接执行。
 5. 如果选择工具，必须按工具 parameters 提取 args；无法确定的字段不要编造。
+6. 管理员学情问题优先用小工具组合，不要默认使用 getAdminLearnerDetail：
+   - 提到员工姓名但没有 learnerId：先 resolveLearner。
+   - 提到关键词名称但没有 keywordId：先 resolveKeyword 查询候选；如果工具返回 ambiguous，不要继续假定其中一个候选，让最终回复反问用户确认。
+   - 问员工概览/画像/进度：getLearnerOverview。
+   - 问员工完成了哪些题、每题分数、个人均分：listLearnerKeywordRecords。
+   - 问某员工某关键词多少分：getLearnerKeywordRecord。
+   - 问某关键词整体/全员平均分：getKeywordAnalytics。
+   - 问一个或多个关键词“哪些人完成/完成名单”：优先用 getKeywordCompletionLearners。
+   - 如果用户说“图灵机这个关键词的平均分”，且上下文里已有员工，通常同时调用 getLearnerKeywordRecord 和 getKeywordAnalytics，用于区分个人分数与全员均分。
+7. 排行榜/上榜/通关人员/积分榜/章节排名问题，优先使用 leaderboard skill，不要用 admin-insights 的员工名单代替排行榜数据。
 输出格式：{"calls":[{"skillName":"...","toolName":"...","reason":"...","args":{}}]}。`;
   const userPrompt = JSON.stringify(
     {
       user: input.user,
       page: input.page,
+      learningContext: input.learningContext,
       history: formatHistory(input.history),
       currentMessage: input.message,
       skills: formatManifest(input.skills),
@@ -118,7 +131,7 @@ export async function planWithLlm(input: {
     return calls
       .map((c) => c as Record<string, unknown>)
       .filter((c) => typeof c.skillName === "string" && typeof c.toolName === "string")
-      .slice(0, 3)
+      .slice(0, 6)
       .map((c) => ({
         skillName: String(c.skillName),
         toolName: String(c.toolName),
@@ -150,6 +163,7 @@ export async function* synthesizeWithLlm(input: {
   message: string;
   page: AssistantPageContext;
   history: AssistantHistoryMessage[];
+  learningContext: AssistantLearningContext;
   toolResults: { skillName: string; toolName: string; result: AssistantToolResult }[];
 }): AsyncGenerator<string> {
   const cfg = readConfig();
@@ -158,11 +172,15 @@ export async function* synthesizeWithLlm(input: {
 1. 中文、简洁、直接回答问题。
 2. 不编造工具结果没有的数据。
 3. 如果工具结果包含确认卡/导航，正文只解释下一步，不要说已经执行写操作。
-4. 尊重权限边界。`;
+4. 尊重权限边界。
+5. 当工具同时返回个人关键词得分和关键词全员统计时，必须明确区分“该员工个人分数”和“该关键词全员平均分”。
+6. 如果工具结果 data.ambiguous=true，必须停止给结论，列出候选项并反问用户“你指的是哪一个”。
+7. 排行榜工具里的 completed 表示“已通过关键词数”；不要说成“完成全部学习/全学科通关”，除非工具明确返回全学科完成。`;
   const userPrompt = JSON.stringify(
     {
       user: input.user,
       page: input.page,
+      learningContext: input.learningContext,
       history: formatHistory(input.history),
       currentMessage: input.message,
       toolResults: input.toolResults.map((r) => ({
@@ -249,6 +267,7 @@ export async function* answerDirectlyWithLlm(input: {
   message: string;
   page: AssistantPageContext;
   history: AssistantHistoryMessage[];
+  learningContext: AssistantLearningContext;
   skills: AssistantSkill[];
 }): AsyncGenerator<string> {
   const cfg = readConfig();
@@ -263,6 +282,7 @@ export async function* answerDirectlyWithLlm(input: {
     {
       user: input.user,
       page: input.page,
+      learningContext: input.learningContext,
       history: formatHistory(input.history),
       currentMessage: input.message,
       availableSkills: formatManifest(input.skills),

@@ -249,7 +249,8 @@ updateMemory(结构化标签+markdown画像，兴趣项自动贴合岗位)；JSO
 ## S16 · AI 助手与 Agent 能力层（v1.4）⏳（PRD §16）
 **目标**：在系统右下角增加「智学助手」入口，做成标准 Agent 流程与可扩展 Skill 能力层，而不是一次性硬编码聊天框。
 - [x] 数据模型：`AssistantConversation` / `AssistantMessage` / `AssistantRun` / `AssistantToolCall`（或等价模型），支持最近会话恢复、Agent 执行审计、工具调用摘要；普通对话不写入 `EmployeeMemory`
-- [x] Agent 核心：`AssistantSkill` / `AssistantTool` 契约、Tool Registry、Skill Loader、参数 schema 校验、权限声明与执行层鉴权兜底
+- [x] Agent 核心：`AssistantSkill` / `AssistantTool` 契约、Capability Registry、受控 Query API 模式、参数 schema、权限声明与执行层鉴权兜底
+- [x] Capability 接入约定：页面能力不开放裸 SQL；业务页面服务函数旁注册 capability provider，Agent 自动汇总 manifest；新增页面功能时只需注册能力，不重新开发 AI 编排
 - [x] Agent 编排：`context assembly → LLM planner（读历史+Skill manifest）→ tool execution → LLM streamed synthesis → optional confirmation action`；本地 matcher 仅作 DeepSeek 不可用时的降级
 - [x] 流式路由：`/api/assistant/chat`（Node runtime），复用 NDJSON/SSE 风格事件；支持文本增量、工具状态、工具结果摘要、确认卡片、导航动作、错误
 - [x] 全局 UI：`AssistantWidget` 挂在 `(app)/layout`；右下角入口 + 桌面右侧抽屉 + 移动端底部近全屏面板；跨页面保留最近会话
@@ -260,6 +261,7 @@ updateMemory(结构化标签+markdown画像，兴趣项自动贴合岗位)；JSO
 - [x] Skill：`peer-summary`（仅已解锁关键词范围内摘要 top 同伴记录；复用同伴可见性规则；不全库搜索、不整段搬运）
 - [x] Skill：`redemption`（第一版唯一写操作：自然语言生成兑换申请确认卡；用户确认后调用现有兑换服务层）
 - [x] Skill：`admin-insights`（管理员只读：平台概览、待审批数量、学习进度大盘、章节排名、预算与积分统计）
+- [x] Capability：`leaderboard`（复用 `getLeaderboard` / `getPointsLeaderboard` / `getChapterWinners`；查询学习榜、积分总榜、章节冠军、已通过关键词上榜人员）
 - [x] 权限与安全：所有工具严格等同当前用户权限；员工无法通过助手越权看后台、低分名单、未解锁同伴笔记；写操作必须确认卡
 - [x] 审计与隐私：模型调用进 `AiCallLog`（assistant phase）；Agent run / tool call 单独记录；管理员默认只看摘要和成本，不看员工完整私聊
 - [x] 导航动作：Agent 返回结构化按钮，用户点击跳转 `/learn`、关键词页、反思页、`/redeem`、后台只读页等；不自动跳转

@@ -12,7 +12,6 @@ import type {
   AssistantConfirmation,
   AssistantEntityRef,
   AssistantHistoryMessage,
-  AssistantLearningContext,
   AssistantPageContext,
   AssistantSkill,
   AssistantToolContext,
@@ -241,8 +240,35 @@ function extractKeywordIdentifier(input: unknown): string {
   return text.replace(/关键词|平均分|多少|张三|李四|王五|赵六|这个|该|的|查|看/g, "").trim();
 }
 
-function contextData(contextWrites: AssistantLearningContext) {
-  return { contextWrites };
+function extractKeywordIdentifiers(input: unknown): string[] {
+  if (input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    if (Array.isArray(record.keywords)) {
+      return record.keywords
+        .filter((item): item is string => typeof item === "string" && Boolean(item.trim()))
+        .map((item) => item.trim());
+    }
+  }
+  const text = inputText(input);
+  const cleaned = text
+    .replace(/分别有哪些人完成了|有哪些人完成了|哪些人完成了|谁完成了|完成名单|完成人|关键词|查询|查看/g, " ")
+    .replace(/[?？]/g, " ");
+  return cleaned
+    .split(/[、,，和与及\s]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2)
+    .filter((item) => !["张三", "李四", "王五", "赵六", "分别", "哪些人", "完成了"].includes(item));
+}
+
+function hasExplicitKeywordInput(input: unknown): boolean {
+  if (input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    if (["keyword", "keywordTerm", "term"].some((key) => typeof record[key] === "string" && Boolean(record[key].trim()))) {
+      return true;
+    }
+  }
+  const text = inputText(input);
+  return hasAny(text, ["关键词", "图灵机", "图灵测试", "人工智能", "达特茅斯", "符号主义", "连接主义", "高频qrs", "高频QRS"]);
 }
 
 async function resolveLearner(input: unknown): Promise<AssistantToolResult<{ found: boolean; learner?: AssistantEntityRef; candidates?: AssistantEntityRef[] }>> {
@@ -287,7 +313,10 @@ async function resolveLearner(input: unknown): Promise<AssistantToolResult<{ fou
   };
 }
 
-async function resolveKeyword(input: unknown): Promise<AssistantToolResult<{ found: boolean; keyword?: AssistantEntityRef; subject?: AssistantEntityRef; candidates?: AssistantEntityRef[] }>> {
+async function resolveKeyword(
+  input: unknown,
+  ctx?: AssistantToolContext,
+): Promise<AssistantToolResult<{ found: boolean; ambiguous?: boolean; keyword?: AssistantEntityRef; subject?: AssistantEntityRef; candidates?: { id: string; name: string; subject: AssistantEntityRef }[] }>> {
   const identifier = extractKeywordIdentifier(input);
   if (!identifier) {
     return {
@@ -303,7 +332,7 @@ async function resolveKeyword(input: unknown): Promise<AssistantToolResult<{ fou
         { term: { contains: identifier } },
       ],
     },
-    orderBy: [{ chapter: { subject: { title: "asc" } } }, { chapter: { index: "asc" } }, { order: "asc" }],
+    orderBy: { orderIndex: "asc" },
     take: 10,
     select: {
       id: true,
@@ -311,14 +340,59 @@ async function resolveKeyword(input: unknown): Promise<AssistantToolResult<{ fou
       chapter: { select: { subject: { select: { id: true, title: true } } } },
     },
   });
-  const keyword =
-    keywords.find((k) => normalizeTerm(k.term) === normalized) ??
-    keywords.find((k) => normalizeTerm(k.term).includes(normalized)) ??
-    null;
+  const exactMatches = keywords.filter((k) => normalizeTerm(k.term) === normalized);
+  const looseMatches = keywords.filter((k) => normalizeTerm(k.term).includes(normalized));
+  const candidates = (exactMatches.length > 0 ? exactMatches : looseMatches).map((k) => ({
+    id: k.id,
+    name: k.term,
+    subject: { id: k.chapter.subject.id, name: k.chapter.subject.title },
+  }));
+
+  const subjectScoped = ctx?.learningContext.subject
+    ? candidates.filter((candidate) => candidate.subject.id === ctx.learningContext.subject?.id)
+    : [];
+  const completedByLearner =
+    candidates.length > 1 && ctx?.learningContext.learner
+      ? await prisma.keywordProgress.findMany({
+          where: {
+            userId: ctx.learningContext.learner.id,
+            keywordId: { in: candidates.map((candidate) => candidate.id) },
+            isCompleted: true,
+          },
+          select: { keywordId: true },
+        })
+      : [];
+  const completedCandidateIds = new Set(completedByLearner.map((row) => row.keywordId));
+  const learnerScoped = candidates.filter((candidate) => completedCandidateIds.has(candidate.id));
+  const chosen =
+    candidates.length === 1
+      ? candidates[0]
+      : subjectScoped.length === 1
+        ? subjectScoped[0]
+        : learnerScoped.length === 1
+          ? learnerScoped[0]
+          : null;
+
+  const keyword = chosen
+    ? keywords.find((k) => k.id === chosen.id) ?? null
+    : null;
   if (!keyword) {
+    if (candidates.length > 1) {
+      return {
+        summary: `「${identifier}」匹配到多个关键词，需要用户确认具体指哪一个。`,
+        data: { found: false, ambiguous: true, candidates },
+      };
+    }
     return {
       summary: `没有找到「${identifier}」这个关键词。`,
-      data: { found: false, candidates: keywords.map((k) => ({ id: k.id, name: k.term })) },
+      data: {
+        found: false,
+        candidates: keywords.map((k) => ({
+          id: k.id,
+          name: k.term,
+          subject: { id: k.chapter.subject.id, name: k.chapter.subject.title },
+        })),
+      },
     };
   }
   const keywordRef = { id: keyword.id, name: keyword.term };
@@ -329,7 +403,11 @@ async function resolveKeyword(input: unknown): Promise<AssistantToolResult<{ fou
       found: true,
       keyword: keywordRef,
       subject: subjectRef,
-      candidates: keywords.map((k) => ({ id: k.id, name: k.term })),
+      candidates: keywords.map((k) => ({
+        id: k.id,
+        name: k.term,
+        subject: { id: k.chapter.subject.id, name: k.chapter.subject.title },
+      })),
     },
     contextWrites: { keyword: keywordRef, subject: subjectRef },
   };
@@ -425,29 +503,41 @@ async function listLearnerKeywordRecords(
       navigation: [{ label: "员工学情", href: "/admin/learners" }],
     };
   }
-  const detail = await getLearnerDetail(learnerId);
-  if (!detail) {
+  const [user, progresses] = await Promise.all([
+    prisma.user.findUnique({ where: { id: learnerId }, select: { id: true, name: true } }),
+    prisma.keywordProgress.findMany({
+      where: { userId: learnerId, isCompleted: true },
+      orderBy: [{ subjectId: "asc" }, { completedAt: "asc" }],
+      include: {
+        keyword: {
+          include: {
+            chapter: { select: { index: true, subject: { select: { id: true, title: true } } } },
+          },
+        },
+      },
+    }),
+  ]);
+  if (!user) {
     return { summary: "没有读到该员工的关键词记录。", data: { found: false } };
   }
-  const records = detail.records.map((record) => ({
-    keywordId: record.keywordId,
-    term: record.term,
-    subjectId: record.subjectId,
-    subjectTitle: record.subjectTitle,
-    chapterIndex: record.chapterIndex,
-    score: record.score,
-    feedback: record.feedback.slice(0, 220),
-    followupCount: record.followups.length,
+  const records = progresses.map((progress) => ({
+    keywordId: progress.keywordId,
+    term: progress.keyword.term,
+    subjectId: progress.subjectId,
+    subjectTitle: progress.keyword.chapter.subject.title,
+    chapterIndex: progress.keyword.chapter.index,
+    score: progress.bestFinalScore,
+    completedAt: progress.completedAt,
   }));
   const avgScore =
     records.length === 0
       ? 0
       : Math.round((records.reduce((sum, record) => sum + record.score, 0) / records.length) * 10) / 10;
   return {
-    summary: `「${detail.name}」已完成 ${records.length} 个关键词，个人完成记录均分 ${avgScore}。`,
-    data: { found: true, learner: { id: detail.userId, name: detail.name }, count: records.length, avgScore, records },
-    contextWrites: { learner: { id: detail.userId, name: detail.name } },
-    navigation: [{ label: `查看${detail.name}详情`, href: `/admin/learners/${detail.userId}` }],
+    summary: `「${user.name}」已完成 ${records.length} 个关键词，个人完成记录均分 ${avgScore}。`,
+    data: { found: true, learner: { id: user.id, name: user.name }, count: records.length, avgScore, records },
+    contextWrites: { learner: { id: user.id, name: user.name } },
+    navigation: [{ label: `查看${user.name}详情`, href: `/admin/learners/${user.id}` }],
   };
 }
 
@@ -456,12 +546,14 @@ async function getLearnerKeywordRecord(
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
   const learnerId = inputString(input, ["learnerId", "userId"]) || ctx.learningContext.learner?.id;
-  let keywordId = inputString(input, ["keywordId"]) || ctx.learningContext.keyword?.id;
+  const explicitKeyword = hasExplicitKeywordInput(input);
+  let keywordId = explicitKeyword ? "" : inputString(input, ["keywordId"]) || ctx.learningContext.keyword?.id;
   let keywordRef = ctx.learningContext.keyword;
   if (!keywordId) {
-    const resolved = await resolveKeyword(input);
+    const resolved = await resolveKeyword(input, ctx);
     keywordId = resolved.contextWrites?.keyword?.id ?? "";
     keywordRef = resolved.contextWrites?.keyword;
+    if (!keywordId && (resolved.data as { ambiguous?: boolean }).ambiguous) return resolved;
   }
   if (!learnerId || !keywordId) {
     return {
@@ -529,12 +621,12 @@ async function getKeywordAnalytics(
   input: unknown,
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
-  let keywordId = inputString(input, ["keywordId"]) || ctx.learningContext.keyword?.id;
-  let keywordRef = ctx.learningContext.keyword;
+  const explicitKeyword = hasExplicitKeywordInput(input);
+  let keywordId = explicitKeyword ? "" : inputString(input, ["keywordId"]) || ctx.learningContext.keyword?.id;
   if (!keywordId) {
-    const resolved = await resolveKeyword(input);
+    const resolved = await resolveKeyword(input, ctx);
     keywordId = resolved.contextWrites?.keyword?.id ?? "";
-    keywordRef = resolved.contextWrites?.keyword;
+    if (!keywordId && (resolved.data as { ambiguous?: boolean }).ambiguous) return resolved;
   }
   if (!keywordId) {
     return { summary: "需要先明确关键词，才能查询关键词统计。", data: { found: false } };
@@ -554,7 +646,6 @@ async function getKeywordAnalytics(
     prisma.keywordProgress.findMany({
       where: { keywordId, isCompleted: true },
       orderBy: { bestFinalScore: "desc" },
-      take: 8,
       select: { bestFinalScore: true, user: { select: { id: true, name: true } } },
     }),
   ]);
@@ -573,12 +664,68 @@ async function getKeywordAnalytics(
       avgScore,
       minScore: agg._min.bestFinalScore,
       maxScore: agg._max.bestFinalScore,
-      topRecords: rows.map((row) => ({
+      completedLearners: rows.map((row) => ({
+        learner: { id: row.user.id, name: row.user.name },
+        score: row.bestFinalScore,
+      })),
+      topRecords: rows.slice(0, 8).map((row) => ({
         learner: { id: row.user.id, name: row.user.name },
         score: row.bestFinalScore,
       })),
     },
     contextWrites: { keyword: keywordEntity, subject, learner: ctx.learningContext.learner },
+  };
+}
+
+async function getKeywordCompletionLearners(
+  input: unknown,
+  ctx: AssistantToolContext,
+): Promise<AssistantToolResult> {
+  const names = extractKeywordIdentifiers(input);
+  if (names.length === 0) {
+    return { summary: "需要先说明要查哪些关键词的完成人名单。", data: { found: false } };
+  }
+
+  const results: Record<string, unknown>[] = [];
+  const ambiguities: Record<string, unknown>[] = [];
+  for (const name of names.slice(0, 6)) {
+    const resolved = await resolveKeyword({ keyword: name }, ctx);
+    if (!resolved.contextWrites?.keyword) {
+      if ((resolved.data as { ambiguous?: boolean }).ambiguous) {
+        ambiguities.push({ requested: name, candidates: (resolved.data as { candidates?: unknown }).candidates });
+      } else {
+        results.push({ requested: name, found: false, reason: resolved.summary });
+      }
+      continue;
+    }
+    const analytics = await getKeywordAnalytics(
+      { keywordId: resolved.contextWrites.keyword.id },
+      { ...ctx, learningContext: { ...ctx.learningContext, ...resolved.contextWrites } },
+    );
+    results.push({ requested: name, ...(analytics.data as Record<string, unknown>) });
+  }
+
+  if (ambiguities.length > 0) {
+    return {
+      summary: "部分关键词存在多个候选，需要用户确认后才能查询完成人名单。",
+      data: { found: false, ambiguous: true, ambiguities, results },
+    };
+  }
+
+  const summary = results
+    .map((result) => {
+      if (!result.found) return `「${result.requested}」未找到数据`;
+      const keyword = result.keyword as AssistantEntityRef;
+      const completedCount = result.completedCount as number;
+      const avgScore = result.avgScore as number;
+      return `「${keyword.name}」${completedCount} 人完成，平均分 ${avgScore}`;
+    })
+    .join("；");
+
+  return {
+    summary,
+    data: { found: true, results },
+    contextWrites: ctx.learningContext,
   };
 }
 
@@ -838,7 +985,7 @@ export const assistantSkills: AssistantSkill[] = [
       },
       {
         name: "resolveKeyword",
-        description: "把关键词名称解析为关键词实体，并写入会话上下文。",
+        description: "查询关键词候选并解析为关键词实体；如有多个候选，返回歧义候选让 AI 反问用户确认，不擅自绑定。",
         permission: "ADMIN",
         parameters: {
           type: "object",
@@ -849,7 +996,7 @@ export const assistantSkills: AssistantSkill[] = [
           additionalProperties: false,
         },
         match: (message) => hasAny(message, ["关键词", "图灵机", "人工智能", "高频qrs", "高频QRS"]),
-        execute: async (input) => resolveKeyword(input),
+        execute: async (input, ctx) => resolveKeyword(input, ctx),
         summarizeInput: (input) => ({ keyword: extractKeywordIdentifier(input) }),
         summarizeResult: (result) => ({ summary: result.summary, contextWrites: result.contextWrites }),
       },
@@ -958,6 +1105,31 @@ export const assistantSkills: AssistantSkill[] = [
           summary: result.summary,
           avgScore: (result.data as { avgScore?: number } | null)?.avgScore,
           contextWrites: result.contextWrites,
+        }),
+      },
+      {
+        name: "getKeywordCompletionLearners",
+        description: "查询一个或多个关键词分别有哪些员工完成、各自分数、完成人数和平均分；如关键词名称有歧义则返回候选让 AI 反问确认。",
+        permission: "ADMIN",
+        parameters: {
+          type: "object",
+          properties: {
+            keywords: {
+              type: "array",
+              items: { type: "string" },
+              description: "关键词名称列表，例如：[\"人工智能\", \"达特茅斯会议\"]",
+            },
+          },
+          required: ["keywords"],
+          additionalProperties: false,
+        },
+        match: (message) =>
+          hasAny(message, ["哪些人完成", "谁完成", "完成人", "完成名单"]) &&
+          hasAny(message, ["关键词", "人工智能", "达特茅斯", "图灵", "高频qrs", "高频QRS"]),
+        execute: async (input, ctx) => getKeywordCompletionLearners(input, ctx),
+        summarizeResult: (result) => ({
+          summary: result.summary,
+          ambiguous: (result.data as { ambiguous?: boolean } | null)?.ambiguous,
         }),
       },
     ],

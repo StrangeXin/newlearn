@@ -2,7 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { answerDirectlyWithLlm, canUseAssistantLlm, planWithLlm, synthesizeWithLlm } from "./llm";
 import { canUseTool } from "./permissions";
-import { assistantSkills, selectSkills } from "./skills";
+import { getAssistantSkills, selectAssistantSkills } from "./capabilities/registry";
 import type {
   AssistantFrame,
   AssistantHistoryMessage,
@@ -133,7 +133,7 @@ function callsFromFallback(skills: AssistantSkill[], message: string, page: Assi
 }
 
 function findPlannedTool(call: AssistantPlannedToolCall) {
-  const skill = assistantSkills.find((s) => s.name === call.skillName);
+  const skill = getAssistantSkills().find((s) => s.name === call.skillName);
   const tool = skill?.tools.find((t) => t.name === call.toolName);
   return skill && tool ? { skill, tool } : null;
 }
@@ -183,6 +183,7 @@ export async function* runAssistant({
   const history: AssistantHistoryMessage[] = recentMessages
     .reverse()
     .map((m) => ({ role: m.role, content: m.content }));
+  const assistantSkills = getAssistantSkills();
   let learningContext = recentMessages
     .map((m) => learningContextFromMetadata(m.metadata))
     .find((ctx) => ctx.learner || ctx.keyword || ctx.subject) ?? {};
@@ -196,6 +197,7 @@ export async function* runAssistant({
         message: text,
         page,
         history,
+        learningContext,
         skills: assistantSkills,
       });
       plannerMode = "llm";
@@ -204,7 +206,7 @@ export async function* runAssistant({
     }
   }
   if (plannedCalls.length === 0) {
-    const selected = selectSkills(text, page, history);
+    const selected = selectAssistantSkills(text, page, history);
     plannedCalls = callsFromFallback(selected, text, page, history);
   }
   const selectedSkillNames = [...new Set(plannedCalls.map((call) => call.skillName))];
@@ -228,6 +230,7 @@ export async function* runAssistant({
             message: text,
             page,
             history,
+            learningContext,
             skills: assistantSkills,
           })) {
             finalAnswer += delta;
@@ -294,6 +297,7 @@ export async function* runAssistant({
             message: text,
             page,
             history,
+            learningContext,
             toolResults,
           })) {
             finalAnswer += delta;
@@ -309,7 +313,10 @@ export async function* runAssistant({
       }
     }
 
-    if (!finalAnswer) finalAnswer = "我现在还不能处理这个请求，可以换个说法试试。";
+    if (!finalAnswer) {
+      finalAnswer = "我现在还不能处理这个请求，可以换个说法试试。";
+      yield { type: "answer", text: finalAnswer };
+    }
     await prisma.assistantMessage.create({
       data: {
         conversationId: conversation.id,
