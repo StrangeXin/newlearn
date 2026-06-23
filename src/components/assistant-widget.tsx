@@ -3,7 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Check, Loader2, MessageCircle, Send, X } from "lucide-react";
+import {
+  Bot,
+  Check,
+  History,
+  Loader2,
+  Maximize2,
+  MessageCircle,
+  Minimize2,
+  Plus,
+  RotateCcw,
+  Send,
+  X,
+} from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { consumeNdjson, StreamError, type NdjsonFrame } from "@/components/thinking";
@@ -23,6 +35,17 @@ interface ToolLine {
   text: string;
   status: "running" | "success" | "error";
 }
+
+interface ConversationSummary {
+  id: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  updatedAt: string;
+}
+
+const headerIconButtonClass =
+  "text-muted hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus-visible:border-brand-300 focus-visible:ring-brand-200/70 aria-expanded:border-brand-200 aria-expanded:bg-brand-50 aria-expanded:text-brand-700";
 
 function pageContext(pathname: string): AssistantPageContext {
   const ctx: AssistantPageContext = { pathname };
@@ -45,10 +68,32 @@ function parseConfirmation(frame: NdjsonFrame): AssistantConfirmation | null {
   return raw ?? null;
 }
 
+function mapMessages(data: { messages?: { role: "USER" | "ASSISTANT"; content: string }[] }) {
+  return (data.messages ?? [])
+    .filter((m) => m.role === "USER" || m.role === "ASSISTANT")
+    .map((m) => ({ role: m.role, content: m.content }));
+}
+
+function formatConversationTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function AssistantWidget() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [switchingConversation, setSwitchingConversation] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [tools, setTools] = useState<ToolLine[]>([]);
   const [actions, setActions] = useState<AssistantNavigationAction[]>([]);
@@ -60,6 +105,28 @@ export function AssistantWidget() {
   const bodyRef = useRef<HTMLDivElement>(null);
   const ctx = useMemo(() => pageContext(pathname), [pathname]);
 
+  function clearTransientState() {
+    setTools([]);
+    setActions([]);
+    setConfirmation(null);
+    setError("");
+  }
+
+  async function loadConversations() {
+    setLoadingConversations(true);
+    try {
+      const res = await fetch("/api/assistant/conversations");
+      if (!res.ok) throw new StreamError(await res.text());
+      const data = await res.json();
+      const rows = Array.isArray(data.conversations) ? data.conversations : [];
+      setConversations(rows);
+    } catch {
+      setError("历史对话加载失败");
+    } finally {
+      setLoadingConversations(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/assistant/history")
@@ -67,14 +134,14 @@ export function AssistantWidget() {
       .then((data) => {
         if (cancelled || !data) return;
         setConversationId(data.conversationId ?? null);
-        setMessages(
-          (data.messages ?? [])
-            .filter((m: { role: string }) => m.role === "USER" || m.role === "ASSISTANT")
-            .map((m: { role: "USER" | "ASSISTANT"; content: string }) => ({
-              role: m.role,
-              content: m.content,
-            })),
-        );
+        setMessages(mapMessages(data));
+      })
+      .catch(() => undefined);
+    fetch("/api/assistant/conversations")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setConversations(Array.isArray(data.conversations) ? data.conversations : []);
       })
       .catch(() => undefined);
     return () => {
@@ -137,6 +204,7 @@ export function AssistantWidget() {
             const f = frame as NdjsonFrame & { conversationId?: string };
             if (f.conversationId) setConversationId(f.conversationId);
             setTools([]);
+            loadConversations().catch(() => undefined);
           } else if (frame.type === "error") {
             throw new StreamError(frame.text || "助手出错了");
           }
@@ -151,6 +219,47 @@ export function AssistantWidget() {
       });
     } finally {
       setPending(false);
+    }
+  }
+
+  async function createConversation(reset = false) {
+    if (pending || switchingConversation) return;
+    setSwitchingConversation(true);
+    clearTransientState();
+    try {
+      const res = await fetch(reset ? "/api/assistant/conversations/reset" : "/api/assistant/conversations", {
+        method: "POST",
+      });
+      if (!res.ok) throw new StreamError(await res.text());
+      const data = await res.json();
+      setConversationId(data.conversationId ?? null);
+      setMessages([]);
+      setInput("");
+      setHistoryOpen(false);
+      await loadConversations();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "创建对话失败");
+    } finally {
+      setSwitchingConversation(false);
+    }
+  }
+
+  async function switchConversation(id: string) {
+    if (pending || switchingConversation || id === conversationId) return;
+    setSwitchingConversation(true);
+    clearTransientState();
+    try {
+      const res = await fetch(`/api/assistant/conversations/${id}`);
+      if (!res.ok) throw new StreamError(await res.text());
+      const data = await res.json();
+      setConversationId(data.conversationId ?? id);
+      setMessages(mapMessages(data));
+      setInput("");
+      setHistoryOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "切换对话失败");
+    } finally {
+      setSwitchingConversation(false);
     }
   }
 
@@ -197,7 +306,13 @@ export function AssistantWidget() {
             className="absolute inset-0 bg-ink/20 backdrop-blur-[2px]"
             onClick={() => setOpen(false)}
           />
-          <section className="absolute bottom-0 right-0 flex h-[min(92vh,760px)] w-full flex-col rounded-t-2xl border border-line bg-surface shadow-2xl sm:bottom-4 sm:right-4 sm:h-[720px] sm:w-[440px] sm:rounded-2xl">
+          <section
+            className={
+              expanded
+                ? "absolute inset-x-3 bottom-3 top-3 flex flex-col rounded-2xl border border-line bg-surface shadow-2xl sm:inset-x-8 sm:bottom-6 sm:right-6 sm:top-6 lg:left-auto lg:w-[min(920px,calc(100vw-3rem))]"
+                : "absolute bottom-0 right-0 flex h-[min(92vh,760px)] w-full flex-col rounded-t-2xl border border-line bg-surface shadow-2xl sm:bottom-4 sm:right-4 sm:h-[720px] sm:w-[440px] sm:rounded-2xl"
+            }
+          >
             <header className="flex items-center justify-between border-b border-line px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
@@ -208,15 +323,138 @@ export function AssistantWidget() {
                   <p className="text-xs text-muted">学习教练 · 平台向导</p>
                 </div>
               </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={headerIconButtonClass}
+                  disabled={pending || switchingConversation}
+                  title="查看历史对话"
+                  aria-label="查看历史对话"
+                  aria-expanded={historyOpen}
+                  onClick={() => {
+                    setHistoryOpen((value) => !value);
+                    loadConversations().catch(() => undefined);
+                  }}
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={headerIconButtonClass}
+                  disabled={pending || switchingConversation}
+                  title="新建对话"
+                  aria-label="新建对话"
+                  onClick={() => createConversation(false)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={headerIconButtonClass}
+                  disabled={pending || switchingConversation || messages.length === 0}
+                  title="清空当前上下文"
+                  aria-label="清空当前上下文"
+                  onClick={() => createConversation(true)}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={headerIconButtonClass}
+                  title={expanded ? "还原窗口" : "放大窗口"}
+                  aria-label={expanded ? "还原窗口" : "放大窗口"}
+                  aria-pressed={expanded}
+                  onClick={() => setExpanded((value) => !value)}
+                >
+                  {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={headerIconButtonClass}
+                  title="关闭助手"
+                  aria-label="关闭助手"
+                  onClick={() => setOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </header>
+
+            {historyOpen && (
+              <div className="border-b border-line bg-surface-2 px-4 py-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-xs font-bold text-ink">历史对话</div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={pending || switchingConversation}
+                    onClick={() => createConversation(false)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    新对话
+                  </Button>
+                </div>
+                <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                  {loadingConversations && (
+                    <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2 py-2 text-xs text-muted">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      正在加载历史对话
+                    </div>
+                  )}
+                  {!loadingConversations && conversations.length === 0 && (
+                    <div className="rounded-lg border border-line bg-surface px-2 py-2 text-xs text-muted">
+                      还没有历史对话。
+                    </div>
+                  )}
+                  {!loadingConversations &&
+                    conversations.map((conversation) => (
+                      <button
+                        key={conversation.id}
+                        type="button"
+                        disabled={pending || switchingConversation}
+                        onClick={() => switchConversation(conversation.id)}
+                        className={
+                          conversation.id === conversationId
+                            ? "w-full rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-2 text-left"
+                            : "w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-left transition hover:border-brand-200 hover:bg-brand-50/60"
+                        }
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 truncate text-xs font-semibold text-ink">
+                            {conversation.title || "新对话"}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-muted">
+                            {formatConversationTime(conversation.updatedAt)}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 line-clamp-1 text-[11px] text-muted">
+                          {conversation.preview || `${conversation.messageCount} 条消息`}
+                        </div>
+                      </button>
+                    ))}
+                </div>
+                <p className="mt-2 text-[11px] text-muted">
+                  清空上下文会开启新对话，学习数据、积分和历史日志不会被删除。
+                </p>
+              </div>
+            )}
 
             <div ref={bodyRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
               {messages.length === 0 && (
                 <div className="rounded-xl border border-line bg-surface-2 p-3 text-sm text-muted">
                   你可以问我“我这周还差什么”“我的积分够兑换吗”，或“帮我申请兑换一本书 80 元”。
+                  {conversationId ? " 这是一个新的对话上下文。" : ""}
                 </div>
               )}
 

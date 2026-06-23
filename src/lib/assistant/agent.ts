@@ -157,6 +157,16 @@ export interface RunAssistantInput {
   conversationId?: string;
 }
 
+export async function createAssistantConversation(userId: string) {
+  const conversation = await prisma.assistantConversation.create({ data: { userId } });
+  return {
+    conversationId: conversation.id,
+    title: conversation.title,
+    createdAt: conversation.createdAt.toISOString(),
+    updatedAt: conversation.updatedAt.toISOString(),
+  };
+}
+
 export async function* runAssistant({
   user,
   message,
@@ -370,18 +380,29 @@ export async function* runAssistant({
   }
 }
 
-export async function getRecentAssistantMessages(userId: string) {
-  const conversation = await prisma.assistantConversation.findFirst({
-    where: { userId },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      messages: {
-        orderBy: { createdAt: "asc" },
-        take: 50,
-        select: { role: true, content: true, metadata: true, createdAt: true },
-      },
-    },
-  });
+export async function getAssistantMessages(userId: string, conversationId?: string) {
+  const conversation = conversationId
+    ? await prisma.assistantConversation.findFirst({
+        where: { id: conversationId, userId },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" },
+            take: 50,
+            select: { role: true, content: true, metadata: true, createdAt: true },
+          },
+        },
+      })
+    : await prisma.assistantConversation.findFirst({
+        where: { userId },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" },
+            take: 50,
+            select: { role: true, content: true, metadata: true, createdAt: true },
+          },
+        },
+      });
   if (!conversation) return { conversationId: null, messages: [] };
   return {
     conversationId: conversation.id,
@@ -392,4 +413,37 @@ export async function getRecentAssistantMessages(userId: string) {
       createdAt: m.createdAt.toISOString(),
     })),
   };
+}
+
+export async function getRecentAssistantMessages(userId: string) {
+  return getAssistantMessages(userId);
+}
+
+export async function listAssistantConversations(userId: string) {
+  const conversations = await prisma.assistantConversation.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    take: 30,
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        take: 2,
+        select: { role: true, content: true },
+      },
+      _count: { select: { messages: true } },
+    },
+  });
+
+  return conversations.map((conversation) => {
+    const firstUserMessage = conversation.messages.find((message) => message.role === "USER");
+    const preview = firstUserMessage?.content || conversation.messages[0]?.content || "";
+    return {
+      id: conversation.id,
+      title: preview ? preview.slice(0, 24) : conversation.title,
+      preview: preview.slice(0, 80),
+      messageCount: conversation._count.messages,
+      createdAt: conversation.createdAt.toISOString(),
+      updatedAt: conversation.updatedAt.toISOString(),
+    };
+  });
 }
